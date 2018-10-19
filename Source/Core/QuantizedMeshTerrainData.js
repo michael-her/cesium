@@ -13,7 +13,8 @@ define([
         './OrientedBoundingBox',
         './TaskProcessor',
         './TerrainEncoding',
-        './TerrainMesh'
+        './TerrainMesh',
+        './TileEdge'
     ], function(
         when,
         BoundingSphere,
@@ -29,7 +30,8 @@ define([
         OrientedBoundingBox,
         TaskProcessor,
         TerrainEncoding,
-        TerrainMesh) {
+        TerrainMesh,
+        TileEdge) {
     'use strict';
 
     /**
@@ -77,6 +79,7 @@ define([
      * @param {Uint8Array} [options.encodedNormals] The buffer containing per vertex normals, encoded using 'oct' encoding
      * @param {Uint8Array} [options.waterMask] The buffer containing the watermask.
      * @param {Credit[]} [options.credits] Array of credits for this tile.
+     * @param {Float32Array} [options.bvh] The bounding-volume hierarchy for this tile and its descendents. TODO: describe its structure
      *
      *
      * @example
@@ -166,6 +169,7 @@ define([
         this._orientedBoundingBox = options.orientedBoundingBox;
         this._horizonOcclusionPoint = options.horizonOcclusionPoint;
         this._credits = options.credits;
+        this._bvh = options.bvh;
 
         var vertexCount = this._quantizedVertices.length / 3;
         var uValues = this._uValues = this._quantizedVertices.subarray(0, vertexCount);
@@ -220,6 +224,23 @@ define([
         waterMask : {
             get : function() {
                 return this._waterMask;
+            }
+        },
+
+        childTileMask : {
+            get : function() {
+                return this._childTileMask;
+            }
+        },
+
+        /**
+         * Gets the bounding-volume hierarchy (BVH) starting with this tile.
+         * @memberof QuantizedMeshTerrainData.prototype
+         * @type {Float32Array}
+         */
+        bvh : {
+            get : function() {
+                return this._bvh;
             }
         }
     });
@@ -334,7 +355,11 @@ define([
                     stride,
                     obb,
                     terrainEncoding,
-                    exaggeration);
+                    exaggeration,
+                    result.westIndicesSouthToNorth,
+                    result.southIndicesEastToWest,
+                    result.eastIndicesNorthToSouth,
+                    result.northIndicesWestToEast);
 
             // Free memory received from server after mesh is created.
             that._quantizedVertices = undefined;
@@ -355,6 +380,11 @@ define([
     };
 
     var upsampleTaskProcessor = new TaskProcessor('upsampleQuantizedTerrainMesh');
+    upsampleTaskProcessor.scheduleTask({});
+
+    // var startTime;
+    // var notDeferredTime;
+    // var stopTime;
 
     /**
      * Upsamples this terrain data for use by a descendant tile.  The resulting instance will contain a subset of the
@@ -405,6 +435,13 @@ define([
             return undefined;
         }
 
+        // if (descendantLevel === 10 && descendantX === 349 && descendantY === 301) {
+        //     if (startTime !== undefined) {
+        //         console.log('**************** wut');
+        //     }
+        //     startTime = Date.now();
+        // }
+
         var isEastChild = thisX * 2 !== descendantX;
         var isNorthChild = thisY * 2 === descendantY;
 
@@ -412,6 +449,10 @@ define([
         var childRectangle = tilingScheme.tileXYToRectangle(descendantX, descendantY, descendantLevel);
 
         var upsamplePromise = upsampleTaskProcessor.scheduleTask({
+            startTime : Date.now(),
+            // level : descendantLevel,
+            // x : descendantX,
+            // y : descendantY,
             vertices : mesh.vertices,
             vertexCountWithoutSkirts : this._vertexCountWithoutSkirts,
             indices : mesh.indices,
@@ -427,9 +468,17 @@ define([
         });
 
         if (!defined(upsamplePromise)) {
+            // if (descendantLevel === 10 && descendantX === 349 && descendantY === 301) {
+            //     console.log('woe');
+            // }
             // Postponed
             return undefined;
         }
+
+        // if (descendantLevel === 10 && descendantX === 349 && descendantY === 301) {
+        //     console.log('Scheduled');
+        //     notDeferredTime = Date.now();
+        // }
 
         var shortestSkirt = Math.min(this._westSkirtHeight, this._eastSkirtHeight);
         shortestSkirt = Math.min(shortestSkirt, this._southSkirtHeight);
@@ -442,6 +491,11 @@ define([
         var credits = this._credits;
 
         return when(upsamplePromise).then(function(result) {
+            // if (descendantLevel === 10 && descendantX === 349 && descendantY === 301) {
+            //     stopTime = Date.now();
+            //     console.log('core upsample: ' + (stopTime - startTime) + ' / ' + (stopTime - notDeferredTime));
+            // }
+
             var quantizedVertices = new Uint16Array(result.vertices);
             var indicesTypedArray = IndexDatatype.createTypedArray(quantizedVertices.length / 3, result.indices);
             var encodedNormals;
@@ -474,6 +528,7 @@ define([
     };
 
     var maxShort = 32767;
+
     var barycentricCoordinateScratch = new Cartesian3();
 
     /**

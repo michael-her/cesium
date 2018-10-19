@@ -33,6 +33,10 @@ uniform float u_dayTextureSaturation[TEXTURE_UNITS];
 uniform float u_dayTextureOneOverGamma[TEXTURE_UNITS];
 #endif
 
+#ifdef APPLY_IMAGERY_CUTOUT
+uniform vec4 u_dayTextureCutoutRectangles[TEXTURE_UNITS];
+#endif
+
 uniform vec4 u_dayTextureTexCoordsRectangle[TEXTURE_UNITS];
 #endif
 
@@ -70,6 +74,10 @@ uniform float u_terrainSplitDirection;
 
 #if defined(FOG) && (defined(ENABLE_VERTEX_LIGHTING) || defined(ENABLE_DAYNIGHT_SHADING)) || defined(GROUND_ATMOSPHERE)
 uniform float u_minimumBrightness;
+#endif
+
+#ifdef HIGHLIGHT_FILL_TILE
+uniform vec4 u_fillHighlightColor;
 #endif
 
 varying vec3 v_positionMC;
@@ -171,7 +179,6 @@ vec4 computeWaterColor(vec3 positionEyeCoordinates, vec2 textureCoordinates, mat
 
 void main()
 {
-
 #ifdef TILE_LIMIT_RECTANGLE
     if (v_textureCoordinates.x < u_cartographicLimitRectangle.x || u_cartographicLimitRectangle.z < v_textureCoordinates.x ||
         v_textureCoordinates.y < u_cartographicLimitRectangle.y || u_cartographicLimitRectangle.w < v_textureCoordinates.y)
@@ -290,6 +297,10 @@ void main()
     {
         finalColor = clippingPlanesEdgeColor;
     }
+#endif
+
+#ifdef HIGHLIGHT_FILL_TILE
+    finalColor = vec4(mix(finalColor.rgb, u_fillHighlightColor.rgb, u_fillHighlightColor.a), finalColor.a);
 #endif
 
 #if defined(FOG) || defined(GROUND_ATMOSPHERE)

@@ -1541,7 +1541,7 @@ define([
 
         var hasTerrainNormal = false;
         if (isTerrain) {
-            hasTerrainNormal = command.owner.data.pickTerrain.mesh.encoding.hasVertexNormals;
+            hasTerrainNormal = command.owner.data.mesh.encoding.hasVertexNormals;
         }
 
         if (command.receiveShadows && lightShadowMapsEnabled) {

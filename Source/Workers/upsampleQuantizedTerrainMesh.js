@@ -49,7 +49,21 @@ define([
     var decodeTexCoordsScratch = new Cartesian2();
     var octEncodedNormalScratch = new Cartesian3();
 
+    // var startTime;
+
     function upsampleQuantizedTerrainMesh(parameters, transferableObjects) {
+        // console.log('L' + parameters.level + 'X' + parameters.x + 'Y' + parameters.y);
+        // if (parameters.level === 10 && parameters.x === 349 && parameters.y === 301) {
+        //     if (startTime !== undefined) {
+        //         console.log('****** wut');
+        //     }
+        //     startTime = Date.now();
+        //     console.log('time until start: ' + (startTime - parameters.startTime));
+        // }
+
+        // var startTime = Date.now();
+        // console.log('time until start: ' + (startTime - parameters.startTime));
+
         var isEastChild = parameters.isEastChild;
         var isNorthChild = parameters.isNorthChild;
 
@@ -96,41 +110,40 @@ define([
         var height;
 
         var i, n;
+        var u, v;
         for (i = 0, n = 0; i < quantizedVertexCount; ++i, n += 2) {
             var texCoords = encoding.decodeTextureCoordinates(parentVertices, i, decodeTexCoordsScratch);
             height  = encoding.decodeHeight(parentVertices, i) / exaggeration;
 
-            parentUBuffer[i] = CesiumMath.clamp((texCoords.x * maxShort) | 0, 0, maxShort);
-            parentVBuffer[i] = CesiumMath.clamp((texCoords.y * maxShort) | 0, 0, maxShort);
+            u = CesiumMath.clamp((texCoords.x * maxShort) | 0, 0, maxShort);
+            v = CesiumMath.clamp((texCoords.y * maxShort) | 0, 0, maxShort);
             parentHeightBuffer[i] = CesiumMath.clamp((((height - parentMinimumHeight) / (parentMaximumHeight - parentMinimumHeight)) * maxShort) | 0, 0, maxShort);
 
-            if (parentUBuffer[i] < threshold) {
-                parentUBuffer[i] = 0;
+            if (u < threshold) {
+                u = 0;
             }
 
-            if (parentVBuffer[i] < threshold) {
-                parentVBuffer[i] = 0;
+            if (v < threshold) {
+                v = 0;
             }
 
-            if (maxShort - parentUBuffer[i] < threshold) {
-                parentUBuffer[i] = maxShort;
+            if (maxShort - u < threshold) {
+                u = maxShort;
             }
 
-            if (maxShort - parentVBuffer[i] < threshold) {
-                parentVBuffer[i] = maxShort;
+            if (maxShort - v < threshold) {
+                v = maxShort;
             }
+
+            parentUBuffer[i] = u;
+            parentVBuffer[i] = v;
 
             if (hasVertexNormals) {
                 var encodedNormal = encoding.getOctEncodedNormal(parentVertices, i, octEncodedNormalScratch);
                 parentNormalBuffer[n] = encodedNormal.x;
                 parentNormalBuffer[n + 1] = encodedNormal.y;
             }
-        }
 
-        var u, v;
-        for (i = 0, n = 0; i < quantizedVertexCount; ++i, n += 2) {
-            u = parentUBuffer[i];
-            v = parentVBuffer[i];
             if ((isEastChild && u >= halfMaxShort || !isEastChild && u <= halfMaxShort) &&
                 (isNorthChild && v >= halfMaxShort || !isNorthChild && v <= halfMaxShort)) {
 
@@ -319,6 +332,11 @@ define([
         } else {
             transferableObjects.push(vertices.buffer, indicesTypedArray.buffer);
         }
+
+        // if (parameters.level === 10 && parameters.x === 349 && parameters.y === 301) {
+        //     var stopTime = Date.now();
+        //     console.log('upsample time: ' + (stopTime - startTime));
+        // }
 
         return {
             vertices : vertices.buffer,
@@ -532,5 +550,7 @@ define([
         }
     }
 
-    return createTaskProcessorWorker(upsampleQuantizedTerrainMesh);
+    var worker = createTaskProcessorWorker(upsampleQuantizedTerrainMesh);
+    worker._workerFunction = upsampleQuantizedTerrainMesh;
+    return worker;
 });

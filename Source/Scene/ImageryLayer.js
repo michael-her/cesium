@@ -157,6 +157,7 @@ define([
      *                 or undefined to show it at all levels.  Level zero is the least-detailed level.
      * @param {Number} [options.maximumTerrainLevel] The maximum terrain level-of-detail at which to show this imagery layer,
      *                 or undefined to show it at all levels.  Level zero is the least-detailed level.
+     * @param {Rectangle} [options.cutoutRectangle] Cartographic rectangle for cutting out a portion of this ImageryLayer.
      */
     function ImageryLayer(imageryProvider, options) {
         this._imageryProvider = imageryProvider;
@@ -279,6 +280,13 @@ define([
         this._requestImageError = undefined;
 
         this._reprojectComputeCommands = [];
+
+        /**
+         * Rectangle cutout in this layer of imagery.
+         *
+         * @type {Rectangle}
+         */
+        this.cutoutRectangle = options.cutoutRectangle;
     }
 
     defineProperties(ImageryLayer.prototype, {
@@ -712,9 +720,8 @@ define([
      * @private
      *
      * @param {Imagery} imagery The imagery to request.
-     * @param {Function} [priorityFunction] The priority function used for sorting the imagery request.
      */
-    ImageryLayer.prototype._requestImagery = function(imagery, priorityFunction) {
+    ImageryLayer.prototype._requestImagery = function(imagery) {
         var imageryProvider = this._imageryProvider;
 
         var that = this;
@@ -765,10 +772,9 @@ define([
 
         function doRequest(waitPromise) {
             var request = new Request({
-                throttle : true,
+                throttle : false,
                 throttleByServer : true,
-                type : RequestType.IMAGERY,
-                priorityFunction : priorityFunction
+                type : RequestType.IMAGERY
             });
             imagery.request = request;
             imagery.state = ImageryState.TRANSITIONING;

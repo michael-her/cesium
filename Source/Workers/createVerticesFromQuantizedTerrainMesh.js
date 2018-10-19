@@ -46,6 +46,8 @@ define([
     var scratchFromENU = new Matrix4();
 
     function createVerticesFromQuantizedTerrainMesh(parameters, transferableObjects) {
+        // var startTime = performance.now();
+
         var quantizedVertices = parameters.quantizedVertices;
         var quantizedVertexCount = quantizedVertices.length / 3;
         var octEncodedNormals = parameters.octEncodedNormals;
@@ -102,8 +104,11 @@ define([
         var maxLatitude = Number.NEGATIVE_INFINITY;
 
         for (var i = 0; i < quantizedVertexCount; ++i) {
-            var u = uBuffer[i] / maxShort;
-            var v = vBuffer[i] / maxShort;
+            var rawU = uBuffer[i];
+            var rawV = vBuffer[i];
+
+            var u = rawU / maxShort;
+            var v = rawV / maxShort;
             var height = CesiumMath.lerp(minimumHeight, maximumHeight, heightBuffer[i] / maxShort);
 
             cartographicScratch.longitude = CesiumMath.lerp(west, east, u);
@@ -130,6 +135,19 @@ define([
             Cartesian3.minimumByComponent(cartesian3Scratch, minimum, minimum);
             Cartesian3.maximumByComponent(cartesian3Scratch, maximum, maximum);
         }
+
+        var westIndicesSouthToNorth = parameters.westIndices.slice().sort(function(a, b) {
+            return uvs[a].y - uvs[b].y;
+        });
+        var eastIndicesNorthToSouth = parameters.eastIndices.slice().sort(function(a, b) {
+            return uvs[b].y - uvs[a].y;
+        });
+        var southIndicesEastToWest = parameters.southIndices.slice().sort(function(a, b) {
+            return uvs[b].x - uvs[a].x;
+        });
+        var northIndicesWestToEast = parameters.northIndices.slice().sort(function(a, b) {
+            return uvs[a].x - uvs[b].x;
+        });
 
         var orientedBoundingBox;
         var boundingSphere;
@@ -208,9 +226,16 @@ define([
 
         transferableObjects.push(vertexBuffer.buffer, indexBuffer.buffer);
 
+        // var stopTime = performance.now();
+        // console.log('createVerticesFromQuantizedTerrainMesh time: ' + (stopTime - startTime));
+
         return {
             vertices : vertexBuffer.buffer,
             indices : indexBuffer.buffer,
+            westIndicesSouthToNorth : westIndicesSouthToNorth,
+            southIndicesEastToWest : southIndicesEastToWest,
+            eastIndicesNorthToSouth : eastIndicesNorthToSouth,
+            northIndicesWestToEast : northIndicesWestToEast,
             vertexStride : vertexStride,
             center : center,
             minimumHeight : minimumHeight,
