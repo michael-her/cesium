@@ -30,7 +30,7 @@ define([
 
     /**
      * Terrain data for a single tile where the terrain data is represented as a heightmap.  A heightmap
-     * is a rectangular array of heights in row-major order from south to north and west to east.
+     * is a rectangular array of heights in row-major order from north to south and west to east.
      *
      * @alias HeightmapTerrainData
      * @constructor
@@ -50,6 +50,10 @@ define([
      *                  <tr><td>2</td><td>4</td><td>Northwest</td></tr>
      *                  <tr><td>3</td><td>8</td><td>Northeast</td></tr>
      *                 </table>
+     * @param {Uint8Array} [options.waterMask] The water mask included in this terrain data, if any.  A water mask is a square
+     *                     Uint8Array or image where a value of 255 indicates water and a value of 0 indicates land.
+     *                     Values in between 0 and 255 are allowed as well to smoothly blend between land and water.
+     * @param {Float32Array} [options.bvh] The bounding-volume hierarchy for this tile and its descendents. TODO: describe its structure
      * @param {Object} [options.structure] An object describing the structure of the height data.
      * @param {Number} [options.structure.heightScale=1.0] The factor by which to multiply height samples in order to obtain
      *                 the height above the heightOffset, in meters.  The heightOffset is added to the resulting
@@ -117,6 +121,7 @@ define([
         this._width = options.width;
         this._height = options.height;
         this._childTileMask = defaultValue(options.childTileMask, 15);
+        this._bvh = options.bvh;
 
         var defaultStructure = HeightmapTessellator.DEFAULT_STRUCTURE;
         var structure = options.structure;
@@ -152,7 +157,7 @@ define([
             }
         },
         /**
-         * The water mask included in this terrain data, if any.  A water mask is a rectangular
+         * The water mask included in this terrain data, if any.  A water mask is a square
          * Uint8Array or image where a value of 255 indicates water and a value of 0 indicates land.
          * Values in between 0 and 255 are allowed as well to smoothly blend between land and water.
          * @memberof HeightmapTerrainData.prototype
@@ -161,6 +166,23 @@ define([
         waterMask : {
             get : function() {
                 return this._waterMask;
+            }
+        },
+
+        childTileMask : {
+            get : function() {
+                return this._childTileMask;
+            }
+        },
+
+        /**
+         * Gets the bounding-volume hierarchy (BVH) starting with this tile.
+         * @memberof HeightmapTerrainData.prototype
+         * @type {Float32Array}
+         */
+        bvh : {
+            get : function() {
+                return this._bvh;
             }
         }
     });
@@ -244,7 +266,11 @@ define([
                     result.numberOfAttributes,
                     result.orientedBoundingBox,
                     TerrainEncoding.clone(result.encoding),
-                    exaggeration);
+                    exaggeration,
+                    result.westIndicesSouthToNorth,
+                    result.southIndicesEastToWest,
+                    result.eastIndicesNorthToSouth,
+                    result.northIndicesWestToEast);
 
             // Free memory received from server after mesh is created.
             that._buffer = undefined;
@@ -333,6 +359,11 @@ define([
         }
         //>>includeEnd('debug');
 
+        var meshData = this._mesh;
+        if (!defined(meshData)) {
+            return undefined;
+        }
+
         var width = this._width;
         var height = this._height;
         var structure = this._structure;
@@ -340,10 +371,6 @@ define([
         var stride = structure.stride;
 
         var heights = new this._bufferType(width * height * stride);
-        var meshData = this._mesh;
-        if (!defined(meshData)) {
-            return undefined;
-        }
 
         var buffer = meshData.vertices;
         var encoding = meshData.encoding;

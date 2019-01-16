@@ -287,18 +287,6 @@ define([
             }
         },
         /**
-         * Gets an event that's raised when a surface tile is loaded and ready to be rendered.
-         *
-         * @memberof Globe.prototype
-         * @type {Event}
-         * @readonly
-         */
-        tileLoadedEvent : {
-            get : function() {
-                return this._surface.tileProvider.tileLoadedEvent;
-            }
-        },
-        /**
          * Returns <code>true</code> when the tile load queue is empty, <code>false</code> otherwise.  When the load queue is empty,
          * all terrain and imagery for the current view have been loaded.
          * @memberof Globe.prototype
@@ -506,18 +494,24 @@ define([
 
         for (i = 0; i < length; ++i) {
             tile = tilesToRender[i];
-            var tileData = tile.data;
+            var surfaceTile = tile.data;
 
-            if (!defined(tileData)) {
+            if (!defined(surfaceTile)) {
                 continue;
             }
 
-            var boundingVolume = tileData.pickBoundingSphere;
+            var boundingVolume = surfaceTile.pickBoundingSphere;
             if (mode !== SceneMode.SCENE3D) {
-                BoundingSphere.fromRectangleWithHeights2D(tile.rectangle, projection, tileData.minimumHeight, tileData.maximumHeight, boundingVolume);
+                // TODO: ok to allocate / recreate the bounding sphere every time here?
+                boundingVolume = BoundingSphere.fromRectangleWithHeights2D(tile.rectangle, projection, surfaceTile.tileBoundingRegion.minimumHeight, surfaceTile.tileBoundingRegion.maximumHeight, boundingVolume);
                 Cartesian3.fromElements(boundingVolume.center.z, boundingVolume.center.x, boundingVolume.center.y, boundingVolume.center);
+            } else if (surfaceTile.renderableTile !== undefined) {
+                BoundingSphere.fromRectangle3D(tile.rectangle, tile.tilingScheme.ellipsoid, surfaceTile.tileBoundingRegion.maximumHeight, boundingVolume);
+            } else if (surfaceTile.mesh !== undefined) {
+                BoundingSphere.clone(surfaceTile.mesh.boundingSphere3D, boundingVolume);
             } else {
-                BoundingSphere.clone(tileData.boundingSphere3D, boundingVolume);
+                // So wait how did we render this thing then? It shouldn't be possible to get here.
+                continue;
             }
 
             var boundingSphereIntersection = IntersectionTests.raySphere(ray, boundingVolume, scratchSphereIntersectionResult);
@@ -577,18 +571,18 @@ define([
 
         for (i = 0; i < length; ++i) {
             tile = tilesToRender[i];
-            var tileData = tile.data;
+            var surfaceTile = tile.data;
 
-            if (!defined(tileData)) {
+            if (!defined(surfaceTile)) {
                 continue;
             }
 
-            var boundingVolume = tileData.pickBoundingSphere;
+            var boundingVolume = surfaceTile.pickBoundingSphere;
             if (mode !== SceneMode.SCENE3D) {
-                BoundingSphere.fromRectangleWithHeights2D(tile.rectangle, projection, tileData.minimumHeight, tileData.maximumHeight, boundingVolume);
+                BoundingSphere.fromRectangleWithHeights2D(tile.rectangle, projection, surfaceTile.minimumHeight, surfaceTile.maximumHeight, boundingVolume);
                 Cartesian3.fromElements(boundingVolume.center.z, boundingVolume.center.x, boundingVolume.center.y, boundingVolume.center);
             } else {
-                BoundingSphere.clone(tileData.boundingSphere3D, boundingVolume);
+                BoundingSphere.clone(surfaceTile.boundingSphere3D, boundingVolume);
             }
 
             var boundingSphereIntersection = IntersectionTests.raySphere(ray, boundingVolume, scratchSphereIntersectionResult);
@@ -686,11 +680,11 @@ define([
                    tile.northeastChild;
         }
 
-        while (defined(tile) && (!defined(tile.data) || !defined(tile.data.pickTerrain))) {
+        while (defined(tile) && (!defined(tile.data) || !defined(tile.data.mesh))) {
             tile = tile.parent;
         }
 
-        if (!defined(tile)) {
+        if (!defined(tile) || !defined(tile.data) || !defined(tile.data.tileBoundingRegion)) {
             return undefined;
         }
 
@@ -722,7 +716,14 @@ define([
             return undefined;
         }
 
-        return ellipsoid.cartesianToCartographic(intersection, scratchGetHeightCartographic).height;
+        var height = ellipsoid.cartesianToCartographic(intersection, scratchGetHeightCartographic).height;
+
+        // For low-detail tiles, large triangles often cut the the globe and appear to be at a much
+        // lower height than actually makes any sense. So clamp the height to the actual height range
+        // of the tile.
+        height = Math.max(height, tile.data.tileBoundingRegion.minimumHeight);
+        height = Math.min(height, tile.data.tileBoundingRegion.maximumHeight);
+        return height;
     };
 
     /**

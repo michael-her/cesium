@@ -77,6 +77,7 @@ define([
      * @param {Uint8Array} [options.encodedNormals] The buffer containing per vertex normals, encoded using 'oct' encoding
      * @param {Uint8Array} [options.waterMask] The buffer containing the watermask.
      * @param {Credit[]} [options.credits] Array of credits for this tile.
+     * @param {Float32Array} [options.bvh] The bounding-volume hierarchy for this tile and its descendents. TODO: describe its structure
      *
      *
      * @example
@@ -166,6 +167,7 @@ define([
         this._orientedBoundingBox = options.orientedBoundingBox;
         this._horizonOcclusionPoint = options.horizonOcclusionPoint;
         this._credits = options.credits;
+        this._bvh = options.bvh;
 
         var vertexCount = this._quantizedVertices.length / 3;
         var uValues = this._uValues = this._quantizedVertices.subarray(0, vertexCount);
@@ -220,6 +222,23 @@ define([
         waterMask : {
             get : function() {
                 return this._waterMask;
+            }
+        },
+
+        childTileMask : {
+            get : function() {
+                return this._childTileMask;
+            }
+        },
+
+        /**
+         * Gets the bounding-volume hierarchy (BVH) starting with this tile.
+         * @memberof QuantizedMeshTerrainData.prototype
+         * @type {Float32Array}
+         */
+        bvh : {
+            get : function() {
+                return this._bvh;
             }
         }
     });
@@ -334,7 +353,11 @@ define([
                     stride,
                     obb,
                     terrainEncoding,
-                    exaggeration);
+                    exaggeration,
+                    result.westIndicesSouthToNorth,
+                    result.southIndicesEastToWest,
+                    result.eastIndicesNorthToSouth,
+                    result.northIndicesWestToEast);
 
             // Free memory received from server after mesh is created.
             that._quantizedVertices = undefined;
