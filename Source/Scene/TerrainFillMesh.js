@@ -6,6 +6,7 @@ define([
         '../Core/Cartesian3',
         '../Core/Cartographic',
         '../Core/defined',
+        '../Core/HeightmapTerrainData',
         '../Core/Math',
         '../Core/DeveloperError',
         '../Core/OrientedBoundingBox',
@@ -26,6 +27,7 @@ define([
         Cartesian3,
         Cartographic,
         defined,
+        HeightmapTerrainData,
         CesiumMath,
         DeveloperError,
         OrientedBoundingBox,
@@ -189,23 +191,23 @@ define([
         }
 
         // This tile was refined, so find rendered children, if any.
-        // Return the tiles in clockwise order.
+        // Visit the tiles in counter-clockwise order.
         switch (tileEdge) {
             case TileEdge.WEST:
-                visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.southwestChild, currentFrameNumber, tileEdge, true, traversalQueue);
                 visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.northwestChild, currentFrameNumber, tileEdge, true, traversalQueue);
+                visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.southwestChild, currentFrameNumber, tileEdge, true, traversalQueue);
                 break;
             case TileEdge.EAST:
-                visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.northeastChild, currentFrameNumber, tileEdge, true, traversalQueue);
                 visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.southeastChild, currentFrameNumber, tileEdge, true, traversalQueue);
+                visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.northeastChild, currentFrameNumber, tileEdge, true, traversalQueue);
                 break;
             case TileEdge.SOUTH:
-                visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.southeastChild, currentFrameNumber, tileEdge, true, traversalQueue);
                 visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.southwestChild, currentFrameNumber, tileEdge, true, traversalQueue);
+                visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.southeastChild, currentFrameNumber, tileEdge, true, traversalQueue);
                 break;
             case TileEdge.NORTH:
-                visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.northwestChild, currentFrameNumber, tileEdge, true, traversalQueue);
                 visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.northeastChild, currentFrameNumber, tileEdge, true, traversalQueue);
+                visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.northwestChild, currentFrameNumber, tileEdge, true, traversalQueue);
                 break;
             case TileEdge.NORTHWEST:
                 visitRenderedTiles(tileProvider, frameState, sourceTile, startTile.northwestChild, currentFrameNumber, tileEdge, true, traversalQueue);
@@ -457,8 +459,11 @@ define([
     var seVertexScratch = new HeightAndNormal();
     var nwVertexScratch = new HeightAndNormal();
     var neVertexScratch = new HeightAndNormal();
+    var heightmapBuffer = typeof Uint8Array !== 'undefined' ? new Uint8Array(9 * 9) : undefined;
 
     function createFillMesh(tileProvider, frameState, tile) {
+        GlobeSurfaceTile.initialize(tile, tileProvider.terrainProvider, tileProvider._imageryLayers);
+
         var surfaceTile = tile.data;
         var fill = surfaceTile.fill;
         var rectangle = tile.rectangle;
@@ -485,185 +490,179 @@ define([
 
         var middleHeight = (minimumHeight + maximumHeight) * 0.5;
 
-        var encoding = new TerrainEncoding(undefined, minimumHeight, maximumHeight, undefined, true, true);
-
-        var centerCartographic = centerCartographicScratch;
-        centerCartographic.longitude = (rectangle.east + rectangle.west) * 0.5;
-        centerCartographic.latitude = (rectangle.north + rectangle.south) * 0.5;
-        centerCartographic.height = middleHeight;
-        encoding.center = ellipsoid.cartographicToCartesian(centerCartographic, encoding.center);
-
-        // At _most_, we have vertices for the 4 corners, plus 1 center, plus every adjacent edge vertex.
-        // In reality there will be less most of the time, but close enough; better
-        // to overestimate than to re-allocate/copy/traverse the vertices twice.
-        var maxVertexCount = 5;
         var i;
         var len;
-        var meshes;
 
-        meshes = fill.westMeshes;
-        for (i = 0, len = meshes.length; i < len; ++i) {
-            maxVertexCount += meshes[i].eastIndicesNorthToSouth.length;
-        }
+        // For low-detail tiles, our usual fill tile approach will create tiles that
+        // look really blocky because they don't have enough vertices to account for the
+        // Earth's curvature. But the height range will also typically be well within
+        // the allowed geometric error for those levels. So fill such tiles with a
+        // constant-height heightmap.
+        var geometricError = tileProvider.getLevelMaximumGeometricError(tile.level);
+        var minCutThroughRadius = ellipsoid.maximumRadius - geometricError;
+        var maxTileWidth = Math.acos(minCutThroughRadius / ellipsoid.maximumRadius) * 4.0;
 
-        meshes = fill.southMeshes;
-        for (i = 0, len = meshes.length; i < len; ++i) {
-            maxVertexCount += meshes[i].northIndicesWestToEast.length;
-        }
+        // When the tile width is greater than maxTileWidth as computed above, the error
+        // of a normal fill tile from globe curvature alone will exceed the allowed geometric
+        // error. Terrain won't change that much. However, we can allow more error than that.
+        // A little blockiness during load is acceptable. For the WGS84 ellipsoid and
+        // standard geometric error setup, the value here will have us use a heightmap
+        // at levels 1, 2, and 3.
+        maxTileWidth *= 1.5;
 
-        meshes = fill.eastMeshes;
-        for (i = 0, len = meshes.length; i < len; ++i) {
-            maxVertexCount += meshes[i].westIndicesSouthToNorth.length;
-        }
+        if (rectangle.width > maxTileWidth && (maximumHeight - minimumHeight) <= geometricError) {
+            var terrainData = new HeightmapTerrainData({
+                width: 9,
+                height: 9,
+                buffer: heightmapBuffer,
+                structure: {
+                    // Use the maximum as the constant height so that this tile's skirt
+                    // covers any cracks with adjacent tiles.
+                    heightOffset: maximumHeight
+                }
+            });
+            fill.mesh = terrainData._createMeshSync(tile.tilingScheme, tile.x, tile.y, tile.level, 1.0);
+        } else {
+            var encoding = new TerrainEncoding(undefined, minimumHeight, maximumHeight, undefined, true, true);
 
-        meshes = fill.northMeshes;
-        for (i = 0, len = meshes.length; i < len; ++i) {
-            maxVertexCount += meshes[i].southIndicesEastToWest.length;
-        }
+            var centerCartographic = centerCartographicScratch;
+            centerCartographic.longitude = (rectangle.east + rectangle.west) * 0.5;
+            centerCartographic.latitude = (rectangle.north + rectangle.south) * 0.5;
+            centerCartographic.height = middleHeight;
+            encoding.center = ellipsoid.cartographicToCartesian(centerCartographic, encoding.center);
 
-        var typedArray = new Float32Array(maxVertexCount * encoding.getStride());
+            // At _most_, we have vertices for the 4 corners, plus 1 center, plus every adjacent edge vertex.
+            // In reality there will be less most of the time, but close enough; better
+            // to overestimate than to re-allocate/copy/traverse the vertices twice.
+            var maxVertexCount = 5;
+            var meshes;
 
-        function addVertexWithComputedPosition(ellipsoid, rectangle, encoding, buffer, index, u, v, height, encodedNormal, webMercatorT) {
-            var cartographic = cartographicScratch;
-            cartographic.longitude = CesiumMath.lerp(rectangle.west, rectangle.east, u);
-            cartographic.latitude = CesiumMath.lerp(rectangle.south, rectangle.north, v);
-            cartographic.height = height;
-            var position = ellipsoid.cartographicToCartesian(cartographic, cartesianScratch);
+            meshes = fill.westMeshes;
+            for (i = 0, len = meshes.length; i < len; ++i) {
+                maxVertexCount += meshes[i].eastIndicesNorthToSouth.length;
+            }
 
-            var uv = uvScratch2;
-            uv.x = u;
-            uv.y = v;
+            meshes = fill.southMeshes;
+            for (i = 0, len = meshes.length; i < len; ++i) {
+                maxVertexCount += meshes[i].northIndicesWestToEast.length;
+            }
 
-            encoding.encode(buffer, index * encoding.getStride(), position, uv, height, encodedNormal, webMercatorT);
+            meshes = fill.eastMeshes;
+            for (i = 0, len = meshes.length; i < len; ++i) {
+                maxVertexCount += meshes[i].westIndicesSouthToNorth.length;
+            }
 
-            return index + 1;
-        }
+            meshes = fill.northMeshes;
+            for (i = 0, len = meshes.length; i < len; ++i) {
+                maxVertexCount += meshes[i].southIndicesEastToWest.length;
+            }
 
-        var nextIndex = 0;
-        var northwestIndex = nextIndex;
-        nextIndex = addVertexWithComputedPosition(ellipsoid, rectangle, encoding, typedArray, nextIndex, 0.0, 1.0, nwCorner.height, nwCorner.encodedNormal, 1.0);
-        nextIndex = addEdge(fill, ellipsoid, encoding, typedArray, nextIndex, fill.westTiles, fill.westMeshes, TileEdge.EAST);
-        var southwestIndex = nextIndex;
-        nextIndex = addVertexWithComputedPosition(ellipsoid, rectangle, encoding, typedArray, nextIndex, 0.0, 0.0, swCorner.height, swCorner.encodedNormal, 0.0);
-        nextIndex = addEdge(fill, ellipsoid, encoding, typedArray, nextIndex, fill.southTiles, fill.southMeshes, TileEdge.NORTH);
-        var southeastIndex = nextIndex;
-        nextIndex = addVertexWithComputedPosition(ellipsoid, rectangle, encoding, typedArray, nextIndex, 1.0, 0.0, seCorner.height, seCorner.encodedNormal, 0.0);
-        nextIndex = addEdge(fill, ellipsoid, encoding, typedArray, nextIndex, fill.eastTiles, fill.eastMeshes, TileEdge.WEST);
-        var northeastIndex = nextIndex;
-        nextIndex = addVertexWithComputedPosition(ellipsoid, rectangle, encoding, typedArray, nextIndex, 1.0, 1.0, neCorner.height, neCorner.encodedNormal, 1.0);
-        nextIndex = addEdge(fill, ellipsoid, encoding, typedArray, nextIndex, fill.northTiles, fill.northMeshes, TileEdge.SOUTH);
+            var typedArray = new Float32Array(maxVertexCount * encoding.getStride());
 
-        // Add a single vertex at the center of the tile.
-        // TODO: minimumHeight and maximumHeight only reflect the corners
-        var obb = OrientedBoundingBox.fromRectangle(rectangle, minimumHeight, maximumHeight, tile.tilingScheme.ellipsoid);
-        var center = obb.center;
+            var nextIndex = 0;
+            var northwestIndex = nextIndex;
+            nextIndex = addVertexWithComputedPosition(ellipsoid, rectangle, encoding, typedArray, nextIndex, 0.0, 1.0, nwCorner.height, nwCorner.encodedNormal, 1.0);
+            nextIndex = addEdge(fill, ellipsoid, encoding, typedArray, nextIndex, fill.westTiles, fill.westMeshes, TileEdge.EAST);
+            var southwestIndex = nextIndex;
+            nextIndex = addVertexWithComputedPosition(ellipsoid, rectangle, encoding, typedArray, nextIndex, 0.0, 0.0, swCorner.height, swCorner.encodedNormal, 0.0);
+            nextIndex = addEdge(fill, ellipsoid, encoding, typedArray, nextIndex, fill.southTiles, fill.southMeshes, TileEdge.NORTH);
+            var southeastIndex = nextIndex;
+            nextIndex = addVertexWithComputedPosition(ellipsoid, rectangle, encoding, typedArray, nextIndex, 1.0, 0.0, seCorner.height, seCorner.encodedNormal, 0.0);
+            nextIndex = addEdge(fill, ellipsoid, encoding, typedArray, nextIndex, fill.eastTiles, fill.eastMeshes, TileEdge.WEST);
+            var northeastIndex = nextIndex;
+            nextIndex = addVertexWithComputedPosition(ellipsoid, rectangle, encoding, typedArray, nextIndex, 1.0, 1.0, neCorner.height, neCorner.encodedNormal, 1.0);
+            nextIndex = addEdge(fill, ellipsoid, encoding, typedArray, nextIndex, fill.northTiles, fill.northMeshes, TileEdge.SOUTH);
 
-        var southMercatorY = WebMercatorProjection.geodeticLatitudeToMercatorAngle(rectangle.south);
-        var oneOverMercatorHeight = 1.0 / (WebMercatorProjection.geodeticLatitudeToMercatorAngle(rectangle.north) - southMercatorY);
-        var centerWebMercatorT = (WebMercatorProjection.geodeticLatitudeToMercatorAngle(centerCartographic.latitude) - southMercatorY) * oneOverMercatorHeight;
+            // Add a single vertex at the center of the tile.
+            // TODO: minimumHeight and maximumHeight only reflect the corners
+            var obb = OrientedBoundingBox.fromRectangle(rectangle, minimumHeight, maximumHeight, tile.tilingScheme.ellipsoid);
 
-        ellipsoid.geodeticSurfaceNormalCartographic(cartographicScratch, normalScratch);
-        var centerEncodedNormal = AttributeCompression.octEncode(normalScratch, octEncodedNormalScratch);
+            var southMercatorY = WebMercatorProjection.geodeticLatitudeToMercatorAngle(rectangle.south);
+            var oneOverMercatorHeight = 1.0 / (WebMercatorProjection.geodeticLatitudeToMercatorAngle(rectangle.north) - southMercatorY);
+            var centerWebMercatorT = (WebMercatorProjection.geodeticLatitudeToMercatorAngle(centerCartographic.latitude) - southMercatorY) * oneOverMercatorHeight;
 
-        var centerIndex = nextIndex;
-        encoding.encode(typedArray, nextIndex * encoding.getStride(), center, Cartesian2.fromElements(0.5, 0.5, uvScratch), middleHeight, centerEncodedNormal, centerWebMercatorT);
-        ++nextIndex;
+            ellipsoid.geodeticSurfaceNormalCartographic(cartographicScratch, normalScratch);
+            var centerEncodedNormal = AttributeCompression.octEncode(normalScratch, octEncodedNormalScratch);
 
-        var vertexCount = nextIndex;
-        var indices = new Uint16Array((vertexCount - 1) * 3); // one triangle per edge vertex
+            var centerIndex = nextIndex;
+            encoding.encode(typedArray, nextIndex * encoding.getStride(), obb.center, Cartesian2.fromElements(0.5, 0.5, uvScratch), middleHeight, centerEncodedNormal, centerWebMercatorT);
+            ++nextIndex;
 
-        var indexOut = 0;
-        for (i = 0; i < vertexCount - 2; ++i) {
+            var vertexCount = nextIndex;
+            var indices = new Uint16Array((vertexCount - 1) * 3); // one triangle per edge vertex
+
+            var indexOut = 0;
+            for (i = 0; i < vertexCount - 2; ++i) {
+                indices[indexOut++] = centerIndex;
+                indices[indexOut++] = i;
+                indices[indexOut++] = i + 1;
+            }
+
             indices[indexOut++] = centerIndex;
             indices[indexOut++] = i;
-            indices[indexOut++] = i + 1;
+            indices[indexOut++] = 0;
+
+            var westIndicesSouthToNorth = [];
+            for (i = southwestIndex; i >= northwestIndex; --i) {
+                westIndicesSouthToNorth.push(i);
+            }
+
+            var southIndicesEastToWest = [];
+            for (i = southeastIndex; i >= southwestIndex; --i) {
+                southIndicesEastToWest.push(i);
+            }
+
+            var eastIndicesNorthToSouth = [];
+            for (i = northeastIndex; i >= southeastIndex; --i) {
+                eastIndicesNorthToSouth.push(i);
+            }
+
+            var northIndicesWestToEast = [];
+            northIndicesWestToEast.push(0);
+            for (i = centerIndex - 1; i >= northeastIndex; --i) {
+                northIndicesWestToEast.push(i);
+            }
+
+            fill.mesh = new TerrainMesh(
+                encoding.center,
+                typedArray,
+                indices,
+                minimumHeight,
+                maximumHeight,
+                BoundingSphere.fromOrientedBoundingBox(obb),
+                computeOccludeePoint(tileProvider, obb.center, rectangle, maximumHeight),
+                encoding.getStride(),
+                obb,
+                encoding,
+                frameState.terrainExaggeration,
+                westIndicesSouthToNorth,
+                southIndicesEastToWest,
+                eastIndicesNorthToSouth,
+                northIndicesWestToEast
+            );
         }
-
-        indices[indexOut++] = centerIndex;
-        indices[indexOut++] = i;
-        indices[indexOut++] = 0;
-
-        var westIndicesSouthToNorth = [];
-        for (i = southwestIndex; i >= northwestIndex; --i) {
-            westIndicesSouthToNorth.push(i);
-        }
-
-        var southIndicesEastToWest = [];
-        for (i = southeastIndex; i >= southwestIndex; --i) {
-            southIndicesEastToWest.push(i);
-        }
-
-        var eastIndicesNorthToSouth = [];
-        for (i = northeastIndex; i >= southeastIndex; --i) {
-            eastIndicesNorthToSouth.push(i);
-        }
-
-        var northIndicesWestToEast = [];
-        northIndicesWestToEast.push(0);
-        for (i = centerIndex - 1; i >= northeastIndex; --i) {
-            northIndicesWestToEast.push(i);
-        }
-
-        var mesh = new TerrainMesh(
-            obb.center,
-            typedArray,
-            indices,
-            minimumHeight,
-            maximumHeight,
-            BoundingSphere.fromOrientedBoundingBox(obb),
-            computeOccludeePoint(tileProvider, center, rectangle, maximumHeight),
-            encoding.getStride(),
-            obb,
-            encoding,
-            frameState.terrainExaggeration,
-            westIndicesSouthToNorth,
-            southIndicesEastToWest,
-            eastIndicesNorthToSouth,
-            northIndicesWestToEast
-        );
-
-        fill.mesh = mesh;
 
         var context = frameState.context;
 
         GlobeSurfaceTile._freeVertexArray(fill.vertexArray);
-        fill.vertexArray = GlobeSurfaceTile._createVertexArrayForMesh(context, mesh);
+        fill.vertexArray = GlobeSurfaceTile._createVertexArrayForMesh(context, fill.mesh);
+        surfaceTile.processImagery(tile, tileProvider.terrainProvider, frameState, true);
+    }
 
-        var tileImageryCollection = surfaceTile.imagery;
+    function addVertexWithComputedPosition(ellipsoid, rectangle, encoding, buffer, index, u, v, height, encodedNormal, webMercatorT) {
+        var cartographic = cartographicScratch;
+        cartographic.longitude = CesiumMath.lerp(rectangle.west, rectangle.east, u);
+        cartographic.latitude = CesiumMath.lerp(rectangle.south, rectangle.north, v);
+        cartographic.height = height;
+        var position = ellipsoid.cartographicToCartesian(cartographic, cartesianScratch);
 
-        if (tileImageryCollection.length === 0) {
-            var imageryLayerCollection = tileProvider._imageryLayers;
-            var terrainProvider = tileProvider.terrainProvider;
-            for (i = 0, len = imageryLayerCollection.length; i < len; ++i) {
-                var layer = imageryLayerCollection.get(i);
-                if (layer.show) {
-                    layer._createTileImagerySkeletons(tile, terrainProvider);
-                }
-            }
-        }
+        var uv = uvScratch2;
+        uv.x = u;
+        uv.y = v;
 
-        for (i = 0, len = tileImageryCollection.length; i < len; ++i) {
-            var tileImagery = tileImageryCollection[i];
-            if (!defined(tileImagery.loadingImagery)) {
-                continue;
-            }
+        encoding.encode(buffer, index * encoding.getStride(), position, uv, height, encodedNormal, webMercatorT);
 
-            if (tileImagery.loadingImagery.state === ImageryState.PLACEHOLDER) {
-                var imageryLayer = tileImagery.loadingImagery.imageryLayer;
-                if (imageryLayer.imageryProvider.ready) {
-                    // Remove the placeholder and add the actual skeletons (if any)
-                    // at the same position.  Then continue the loop at the same index.
-                    tileImagery.freeResources();
-                    tileImageryCollection.splice(i, 1);
-                    imageryLayer._createTileImagerySkeletons(tile, tileProvider.terrainProvider, i);
-                    --i;
-                    len = tileImageryCollection.length;
-                    continue;
-                }
-            }
-
-            tileImagery.processStateMachine(tile, frameState, true);
-        }
+        return index + 1;
     }
 
     var sourceRectangleScratch = new Rectangle();

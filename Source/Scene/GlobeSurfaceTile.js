@@ -279,7 +279,7 @@ define([
         this.wireframeVertexArray = undefined;
     };
 
-    GlobeSurfaceTile.processStateMachine = function(tile, frameState, terrainProvider, imageryLayerCollection, terrainOnly) {
+    GlobeSurfaceTile.initialize = function(tile, terrainProvider, imageryLayerCollection) {
         var surfaceTile = tile.data;
         if (!defined(surfaceTile)) {
             surfaceTile = tile.data = new GlobeSurfaceTile();
@@ -289,6 +289,12 @@ define([
             prepareNewTile(tile, terrainProvider, imageryLayerCollection);
             tile.state = QuadtreeTileLoadState.LOADING;
         }
+    };
+
+    GlobeSurfaceTile.processStateMachine = function(tile, frameState, terrainProvider, imageryLayerCollection, terrainOnly) {
+        GlobeSurfaceTile.initialize(tile, terrainProvider, imageryLayerCollection);
+
+        var surfaceTile = tile.data;
 
         if (defined(surfaceTile.boundingVolumeSourceTile) && surfaceTile.boundingVolumeSourceTile !== tile && terrainProvider.getNearestBvhLevel !== undefined) {
             // So here we are loading this tile, but we know our bounding volume isn't very good, and so our
@@ -324,15 +330,49 @@ define([
             return;
         }
 
+        var wasAlreadyRenderable = tile.renderable;
+
         // The terrain is renderable as soon as we have a valid vertex array.
-        var isRenderable = defined(surfaceTile.vertexArray);
+        tile.renderable = defined(surfaceTile.vertexArray);
 
         // But it's not done loading until it's in the READY state.
-        var isDoneLoading = surfaceTile.terrainState === TerrainState.READY;
+        var isTerrainDoneLoading = surfaceTile.terrainState === TerrainState.READY;
 
         // If this tile's terrain and imagery are just upsampled from its parent, mark the tile as
         // upsampled only.  We won't refine a tile if its four children are upsampled only.
-        var isUpsampledOnly = defined(surfaceTile.terrainData) && surfaceTile.terrainData.wasCreatedByUpsampling();
+        tile.upsampledFromParent = defined(surfaceTile.terrainData) && surfaceTile.terrainData.wasCreatedByUpsampling();
+
+        var isImageryDoneLoading = surfaceTile.processImagery(tile, terrainProvider, frameState);
+
+        if (isTerrainDoneLoading && isImageryDoneLoading) {
+            var callbacks = tile._loadedCallbacks;
+            var newCallbacks = {};
+            for(var layerId in callbacks) {
+                if (callbacks.hasOwnProperty(layerId)) {
+                    if(!callbacks[layerId](tile)) {
+                        newCallbacks[layerId] = callbacks[layerId];
+                    }
+                }
+            }
+            tile._loadedCallbacks = newCallbacks;
+
+            tile.state = QuadtreeTileLoadState.DONE;
+        }
+
+        // Once a tile is renderable, it stays renderable, because doing otherwise would
+        // cause detail (or maybe even the entire globe) to vanish when adding a new
+        // imagery layer. `GlobeSurfaceTileProvider._onLayerAdded` sets renderable to
+        // false for all affected tiles that are not currently being rendered.
+        if (wasAlreadyRenderable) {
+            tile.renderable = true;
+        }
+    };
+
+    GlobeSurfaceTile.prototype.processImagery = function(tile, terrainProvider, frameState, skipLoading) {
+        var surfaceTile = tile.data;
+        var isUpsampledOnly = tile.upsampledFromParent;
+        var isRenderable = tile.renderable;
+        var isDoneLoading = true;
 
         // Transition imagery states
         var tileImageryCollection = surfaceTile.imagery;
@@ -360,7 +400,7 @@ define([
                 }
             }
 
-            var thisTileDoneLoading = tileImagery.processStateMachine(tile, frameState);
+            var thisTileDoneLoading = tileImagery.processStateMachine(tile, frameState, skipLoading);
             isDoneLoading = isDoneLoading && thisTileDoneLoading;
 
             // The imagery is renderable as soon as we have any renderable imagery for this region.
@@ -370,23 +410,10 @@ define([
                               (tileImagery.loadingImagery.state === ImageryState.FAILED || tileImagery.loadingImagery.state === ImageryState.INVALID);
         }
 
-        tile.renderable = isRenderable;
         tile.upsampledFromParent = isUpsampledOnly;
+        tile.renderable = isRenderable;
 
-        if (isDoneLoading) {
-            var callbacks = tile._loadedCallbacks;
-            var newCallbacks = {};
-            for(var layerId in callbacks) {
-                if (callbacks.hasOwnProperty(layerId)) {
-                    if(!callbacks[layerId](tile)) {
-                        newCallbacks[layerId] = callbacks[layerId];
-                    }
-                }
-            }
-            tile._loadedCallbacks = newCallbacks;
-
-            tile.state = QuadtreeTileLoadState.DONE;
-        }
+        return isDoneLoading;
     };
 
     function prepareNewTile(tile, terrainProvider, imageryLayerCollection) {
