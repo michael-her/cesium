@@ -847,6 +847,13 @@ define([
         var imageryProvider = this._imageryProvider;
         var image = imagery.image;
 
+        if (image === {}) {
+            // There wasn't an error, but we don't actually have an image.  This probably means the API responded with a
+            // success status, but didn't send data, and the ImageryProvider suppressed the error that Resource threw
+            // when it couldn't construct an image from the message body.  Don't render this.
+            return;
+        }
+
         // If this imagery provider has a discard policy, use it to check if this
         // image should be discarded.
         if (defined(imageryProvider.tileDiscardPolicy)) {
