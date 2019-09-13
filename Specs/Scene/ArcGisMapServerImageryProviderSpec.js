@@ -215,7 +215,8 @@ defineSuite([
             expect(provider.usingPrecachedTiles).toEqual(true);
             expect(provider.hasAlphaChannel).toBeDefined();
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
+                var url = request.url;
                 if (/^blob:/.test(url)) {
                     Resource._DefaultImplementations.createImage(url, crossOrigin, deferred);
                 } else {
@@ -291,7 +292,8 @@ defineSuite([
             expect(provider.rectangle).toEqual(new GeographicTilingScheme().rectangle);
             expect(provider.usingPrecachedTiles).toEqual(true);
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
+                var url = request.url;
                 if (/^blob:/.test(url) || supportsImageBitmapOptions) {
                     // If ImageBitmap is supported, we expect a loadWithXhr request to fetch it as a blob.
                     Resource._DefaultImplementations.createImage(url, crossOrigin, deferred, true, true);
@@ -343,8 +345,8 @@ defineSuite([
             expect(provider.usingPrecachedTiles).toEqual(false);
             expect(provider.enablePickFeatures).toBe(true);
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
-                var uri = new Uri(url);
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
+                var uri = new Uri(request.url);
                 var params = queryToObject(uri.query);
 
                 var uriWithoutQuery = new Uri(uri);
@@ -405,8 +407,8 @@ defineSuite([
             expect(provider.enablePickFeatures).toBe(false);
             expect(provider.layers).toEqual('foo,bar');
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
-                var uri = new Uri(url);
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
+                var uri = new Uri(request.url);
                 var params = queryToObject(uri.query);
 
                 var uriWithoutQuery = new Uri(uri);
@@ -464,7 +466,8 @@ defineSuite([
             expect(provider.usingPrecachedTiles).toEqual(true);
             expect(provider.hasAlphaChannel).toBeDefined();
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
+                var url = request.url;
                 if (/^blob:/.test(url) || supportsImageBitmapOptions) {
                     // If ImageBitmap is supported, we expect a loadWithXhr request to fetch it as a blob.
                     Resource._DefaultImplementations.createImage(url, crossOrigin, deferred, true, true);
@@ -595,7 +598,7 @@ defineSuite([
             }, 1);
         });
 
-        Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+        Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
             if (tries === 2) {
                 // Succeed after 2 tries
                 Resource._DefaultImplementations.createImage('Data/Images/Red16x16.png', crossOrigin, deferred);

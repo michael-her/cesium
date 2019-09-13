@@ -242,8 +242,8 @@ defineSuite([
         it('provides HeightmapTerrainData', function() {
             var baseUrl = 'made/up/url';
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
-                expect(url.indexOf('.tif?cesium=true')).toBeGreaterThanOrEqualTo(0);
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
+                expect(request.url.indexOf('.tif?cesium=true')).toBeGreaterThanOrEqualTo(0);
 
                 // Just return any old image.
                 Resource._DefaultImplementations.createImage(imageUrl, crossOrigin, deferred);
@@ -268,7 +268,7 @@ defineSuite([
 
             var deferreds = [];
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
                 // Do nothing, so requests never complete
                 deferreds.push(deferred);
             };

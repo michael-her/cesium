@@ -80,7 +80,7 @@ defineSuite([
     };
 
     it('discards tiles when the ImageryProviders discard policy says to do so', function() {
-        Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+        Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
             Resource._DefaultImplementations.createImage('Data/Images/Red16x16.png', crossOrigin, deferred);
         };
 
@@ -144,7 +144,7 @@ defineSuite([
             });
         };
 
-        Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+        Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
             Resource._DefaultImplementations.createImage('Data/Images/Red16x16.png', crossOrigin, deferred);
         };
 
@@ -285,7 +285,7 @@ defineSuite([
     });
 
     it('assigns texture property when reprojection is skipped because the tile is very small', function() {
-        Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+        Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
             Resource._DefaultImplementations.createImage('Data/Images/Red256x256.png', crossOrigin, deferred);
         };
 

@@ -802,7 +802,7 @@ defineSuite([
                 }, 1);
             });
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
                 if (tries === 2) {
                     // Succeed after 2 tries
                     Resource._DefaultImplementations.createImage('Data/Images/Red16x16.png', crossOrigin, deferred);
@@ -1225,7 +1225,7 @@ defineSuite([
                 times : times
             });
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
                 Resource._DefaultImplementations.createImage('Data/Images/Red16x16.png', crossOrigin, deferred);
             };
 
@@ -1276,7 +1276,7 @@ defineSuite([
                 times : times
             });
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
                 Resource._DefaultImplementations.createImage('Data/Images/Red16x16.png', crossOrigin, deferred);
             };
 
@@ -1325,7 +1325,7 @@ defineSuite([
                 shouldAnimate : true
             });
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
                 Resource._DefaultImplementations.createImage('Data/Images/Red16x16.png', crossOrigin, deferred);
             };
 
@@ -1379,7 +1379,7 @@ defineSuite([
                 shouldAnimate : false
             });
 
-            Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+            Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
                 Resource._DefaultImplementations.createImage('Data/Images/Red16x16.png', crossOrigin, deferred);
             };
 

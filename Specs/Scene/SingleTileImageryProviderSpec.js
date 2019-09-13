@@ -194,7 +194,7 @@ defineSuite([
             }
         });
 
-        Resource._Implementations.createImage = function(url, crossOrigin, deferred) {
+        Resource._Implementations.createImage = function(request, crossOrigin, deferred) {
             if (tries === 2) {
                 // Succeed after 2 tries
                 Resource._DefaultImplementations.createImage('Data/Images/Red16x16.png', crossOrigin, deferred);
