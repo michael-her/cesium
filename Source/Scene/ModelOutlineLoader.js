@@ -7,6 +7,8 @@ import TextureMagnificationFilter from "../Renderer/TextureMagnificationFilter.j
 import TextureMinificationFilter from "../Renderer/TextureMinificationFilter.js";
 import TextureWrap from "../Renderer/TextureWrap.js";
 import ForEach from "../ThirdParty/GltfPipeline/ForEach.js";
+import WebGLConstants from "../Core/WebGLConstants.js";
+import ModelOutlineGenerator from "./ModelOutlineGenerator";
 
 /**
  * Creates face outlines for glTF primitives with the `CESIUM_primitive_outline` extension.
@@ -33,9 +35,14 @@ ModelOutlineLoader.hasExtension = function (model) {
  * @private
  */
 ModelOutlineLoader.outlinePrimitives = function (model) {
-  if (!ModelOutlineLoader.hasExtension(model)) {
-    return;
-  }
+  // TODO: add this back
+  // if (!ModelOutlineLoader.hasExtension(model)) {
+  //   return;
+  // }
+
+  // if(defined(model.extensionsUsed.CESIUM_generate_primitive_outline)) {
+  ModelOutlineGenerator.generateOutlinesForModel(model);
+  // }
 
   var gltf = model.gltf;
 
@@ -185,7 +192,7 @@ function addOutline(
   var edgeIndexBufferView = loadResources.getBuffer(edgeIndexBufferViewGltf);
 
   var triangleIndices =
-    triangleIndexAccessorGltf.componentType === 5123
+    triangleIndexAccessorGltf.componentType === WebGLConstants.UNSIGNED_SHORT
       ? new Uint16Array(
           triangleIndexBufferView.buffer,
           triangleIndexBufferView.byteOffset +
@@ -199,7 +206,7 @@ function addOutline(
           triangleIndexAccessorGltf.count
         );
   var edgeIndices =
-    edgeIndexAccessorGltf.componentType === 5123
+    edgeIndexAccessorGltf.componentType === WebGLConstants.UNSIGNED_SHORT
       ? new Uint16Array(
           edgeIndexBufferView.buffer,
           edgeIndexBufferView.byteOffset + edgeIndexAccessorGltf.byteOffset,
@@ -276,7 +283,7 @@ function addOutline(
       if (copy >= 65536 && triangleIndices instanceof Uint16Array) {
         // We outgrew a 16-bit index buffer, switch to 32-bit.
         triangleIndices = new Uint32Array(triangleIndices);
-        triangleIndexAccessorGltf.componentType = 5125; // UNSIGNED_INT
+        triangleIndexAccessorGltf.componentType = WebGLConstants.UNSIGNED_INT;
         triangleIndexBufferViewGltf.buffer =
           gltf.buffers.push({
             byteLength: triangleIndices.byteLength,
