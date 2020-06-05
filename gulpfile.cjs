@@ -11,7 +11,6 @@ var readline = require("readline");
 var request = require("request");
 
 var globby = require("globby");
-var gulpTap = require("gulp-tap");
 var gulpUglify = require("gulp-uglify");
 var open = require("open");
 var rimraf = require("rimraf");
@@ -428,6 +427,8 @@ gulp.task(
     var indexSrc = gulp
       .src("index.release.html")
       .pipe(gulpRename("index.html"));
+
+    var gulpTap = require("gulp-tap");
 
     return mergeStream(builtSrc, staticSrc, indexSrc)
       .pipe(
