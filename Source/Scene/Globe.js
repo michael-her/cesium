@@ -743,6 +743,8 @@ Globe.prototype.pickTriangle = function (ray, scene, result) {
   }
   //>>includeEnd('debug');
 
+  var cullBackFaces = true;
+
   var mode = scene.mode;
   var projection = scene.mapProjection;
 

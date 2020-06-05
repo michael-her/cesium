@@ -33,6 +33,7 @@ import Cesium3DTilesetCache from "./Cesium3DTilesetCache.js";
 import Cesium3DTilesetHeatmap from "./Cesium3DTilesetHeatmap.js";
 import Cesium3DTilesetStatistics from "./Cesium3DTilesetStatistics.js";
 import Cesium3DTileStyleEngine from "./Cesium3DTileStyleEngine.js";
+import Cesium3DTileStyle from "./Cesium3DTileStyle.js";
 import ClippingPlaneCollection from "./ClippingPlaneCollection.js";
 import LabelCollection from "./LabelCollection.js";
 import PointCloudEyeDomeLighting from "./PointCloudEyeDomeLighting.js";
@@ -938,6 +939,14 @@ function Cesium3DTileset(options) {
           var credit = extraCredits[i];
           credits.push(new Credit(credit.html, credit.showOnScreen));
         }
+      }
+
+      if (
+        defined(extras) &&
+        defined(extras.ion) &&
+        defined(extras.ion.defaultStyle)
+      ) {
+        that.style = new Cesium3DTileStyle(extras.ion.defaultStyle);
       }
 
       // Save the original, untransformed bounding volume position so we can apply
