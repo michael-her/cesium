@@ -82,9 +82,9 @@ ModelUtility.splitIncompatibleMaterials = function (gltf) {
       var hasNormals = defined(primitive.attributes.NORMAL);
       var hasTangents = defined(primitive.attributes.TANGENT);
       var hasTexCoords = defined(primitive.attributes.TEXCOORD_0);
-      var hasOutline =
-        defined(primitive.extensions) &&
-        defined(primitive.extensions.CESIUM_primitive_outline);
+      var hasOutline = true;
+      // defined(primitive.extensions) &&
+      // defined(primitive.extensions.CESIUM_primitive_outline);
 
       var primitiveInfo = primitiveInfoByMaterial[materialIndex];
       if (!defined(primitiveInfo)) {
