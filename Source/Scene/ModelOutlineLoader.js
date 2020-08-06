@@ -23,10 +23,11 @@ function ModelOutlineLoader() {}
  * @private
  */
 ModelOutlineLoader.hasExtension = function (model) {
-  return (
-    defined(model.extensionsRequired.CESIUM_primitive_outline) ||
-    defined(model.extensionsUsed.CESIUM_primitive_outline)
-  );
+  return true;
+  // return (
+  //   defined(model.extensionsRequired.CESIUM_primitive_outline) ||
+  //   defined(model.extensionsUsed.CESIUM_primitive_outline)
+  // );
 };
 
 /**
@@ -55,11 +56,13 @@ ModelOutlineLoader.outlinePrimitives = function (model) {
 
   ForEach.mesh(gltf, function (mesh, meshId) {
     ForEach.meshPrimitive(mesh, function (primitive, primitiveId) {
-      if (!defined(primitive.extensions)) {
-        return;
-      }
+      // if (!defined(primitive.extensions)) {
+      //   return;
+      // }
 
-      var outlineData = primitive.extensions.CESIUM_primitive_outline;
+      var outlineData = {
+        indices: 0,
+      }; //primitive.extensions.CESIUM_primitive_outline;
       if (!defined(outlineData)) {
         return;
       }
@@ -241,7 +244,7 @@ function addOutline(
     var i1 = triangleIndices[i + 1];
     var i2 = triangleIndices[i + 2];
 
-    var all = false; // set this to true to draw a full wireframe.
+    var all = true; // set this to true to draw a full wireframe.
     var has01 = all || isHighlighted(edges, i0, i1);
     var has12 = all || isHighlighted(edges, i1, i2);
     var has20 = all || isHighlighted(edges, i2, i0);
