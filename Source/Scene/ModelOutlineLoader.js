@@ -7,6 +7,7 @@ import TextureMagnificationFilter from "../Renderer/TextureMagnificationFilter.j
 import TextureMinificationFilter from "../Renderer/TextureMinificationFilter.js";
 import TextureWrap from "../Renderer/TextureWrap.js";
 import ForEach from "../ThirdParty/GltfPipeline/ForEach.js";
+import ModelOutlineGenerator from "./ModelOutlineGenerator.js";
 
 // glTF does not allow an index value of 65535 because this is the primitive
 // restart value in some APIs.
@@ -44,6 +45,8 @@ ModelOutlineLoader.outlinePrimitives = function (model) {
 
   var gltf = model.gltf;
 
+  ModelOutlineGenerator.generateOutlinesForModel(model);
+
   // Assumption: A single bufferView contains a single zero-indexed range of vertices.
   // No trickery with using large accessor byteOffsets to store multiple zero-based
   // ranges of vertices in a single bufferView. Use separate bufferViews for that,
@@ -60,9 +63,7 @@ ModelOutlineLoader.outlinePrimitives = function (model) {
       //   return;
       // }
 
-      var outlineData = {
-        indices: 0,
-      }; //primitive.extensions.CESIUM_primitive_outline;
+      var outlineData = primitive.extensions.CESIUM_primitive_outline;
       if (!defined(outlineData)) {
         return;
       }
@@ -244,7 +245,7 @@ function addOutline(
     var i1 = triangleIndices[i + 1];
     var i2 = triangleIndices[i + 2];
 
-    var all = true; // set this to true to draw a full wireframe.
+    var all = false; // set this to true to draw a full wireframe.
     var has01 = all || isHighlighted(edges, i0, i1);
     var has12 = all || isHighlighted(edges, i1, i2);
     var has20 = all || isHighlighted(edges, i2, i0);
