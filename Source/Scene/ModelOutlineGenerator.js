@@ -47,7 +47,7 @@ function outlinePrimitive(model, meshId, primitiveId) {
   var positions = new Float32Array(
     positionBufferView.buffer,
     positionBufferView.byteOffset + positionAccessorGltf.byteOffset,
-    positionAccessorGltf.count * (positionBufferViewGltf.byteStride / 4)
+    positionAccessorGltf.count * 3
   );
 
   var triangleIndices =
@@ -95,11 +95,26 @@ function outlinePrimitive(model, meshId, primitiveId) {
     normals,
     normalBufferViewGltf.byteStride / 4
   );
+  var minimumAngle = Math.PI / 20;
+
+  if (
+    defined(mesh.primitives[primitiveId].extensions) &&
+    defined(mesh.primitives[primitiveId].extensions.CESIUM_primitive_outline) &&
+    defined(
+      mesh.primitives[primitiveId].extensions.CESIUM_primitive_outline
+        .outlineWhenAngleBetweenFaceNormalsExceeds
+    )
+  ) {
+    minimumAngle =
+      mesh.primitives[primitiveId].extensions.CESIUM_primitive_outline
+        .outlineWhenAngleBetweenFaceNormalsExceeds;
+  }
 
   let outlineIndexBuffer = findEdgesToOutline(
     halfEdgeMap,
     vertexNormalGetter,
-    triangleIndices
+    triangleIndices,
+    minimumAngle
   );
 
   // Add new buffer to gltf
@@ -132,7 +147,7 @@ function outlinePrimitive(model, meshId, primitiveId) {
       count: outlineIndexBuffer.length, // start and end for each line
     }) - 1;
 
-  mesh.primitives[primitiveId]["extensions"] = {
+  mesh.primitives[primitiveId].extensions = {
     CESIUM_primitive_outline: {
       indices: accessorId,
     },
@@ -329,9 +344,13 @@ function getFirstVertexOfFaces(halfEdge, triangleIndices) {
   return faces;
 }
 
-function findEdgesToOutline(halfEdgeMap, vertexNormalGetter, triangleIndices) {
+function findEdgesToOutline(
+  halfEdgeMap,
+  vertexNormalGetter,
+  triangleIndices,
+  minimumAngle
+) {
   var outlineThese = [];
-  var minimumAngle = Math.PI / 20;
   const checked = new Set();
   const allEdges = Array.from(halfEdgeMap.values());
   for (let i = 0; i < allEdges.length; i++) {
@@ -378,7 +397,7 @@ function findEdgesToOutline(halfEdgeMap, vertexNormalGetter, triangleIndices) {
         let angleBetween;
         try {
           angleBetween = Cartesian3.angleBetween(
-            Cartesian3.fromArray(faceNormal), 
+            Cartesian3.fromArray(faceNormal),
             Cartesian3.fromArray(neighborNormal)
           );
         } catch (error) {

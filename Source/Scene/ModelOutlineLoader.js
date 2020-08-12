@@ -8,6 +8,7 @@ import TextureMinificationFilter from "../Renderer/TextureMinificationFilter.js"
 import TextureWrap from "../Renderer/TextureWrap.js";
 import ForEach from "../ThirdParty/GltfPipeline/ForEach.js";
 import ModelOutlineGenerator from "./ModelOutlineGenerator.js";
+import OutlineGenerationMode from "./OutlineGenerationMode.js";
 
 // glTF does not allow an index value of 65535 because this is the primitive
 // restart value in some APIs.
@@ -24,11 +25,46 @@ function ModelOutlineLoader() {}
  * @private
  */
 ModelOutlineLoader.hasExtension = function (model) {
-  return true;
-  // return (
-  //   defined(model.extensionsRequired.CESIUM_primitive_outline) ||
-  //   defined(model.extensionsUsed.CESIUM_primitive_outline)
-  // );
+  return (
+    defined(model.extensionsRequired.CESIUM_primitive_outline) ||
+    defined(model.extensionsUsed.CESIUM_primitive_outline)
+  );
+};
+
+/**
+ * Returns true if outlines should be generated for the model.
+ * @private
+ */
+ModelOutlineLoader.shouldGenerateOutlines = function (model) {
+  if (model.generateOutlines === OutlineGenerationMode.ON) {
+    return true;
+  }
+
+  var outlineGenerationRequestedInGltf = false;
+  if (ModelOutlineLoader.hasExtension(model)) {
+    ForEach.mesh(model.gltf, function (mesh, _meshId) {
+      ForEach.meshPrimitive(mesh, function (primitive, _primitiveId) {
+        if (
+          defined(primitive.extensions) &&
+          defined(primitive.extensions.CESIUM_primitive_outline) &&
+          defined(
+            primitive.extensions.CESIUM_primitive_outline
+              .outlineWhenAngleBetweenFaceNormalsExceeds
+          )
+        ) {
+          outlineGenerationRequestedInGltf = true;
+        }
+      });
+    });
+  }
+  if (
+    model.generateOutlines === OutlineGenerationMode.USE_GLTF_SETTINGS &&
+    outlineGenerationRequestedInGltf
+  ) {
+    return true;
+  }
+
+  return false;
 };
 
 /**
@@ -39,13 +75,18 @@ ModelOutlineLoader.hasExtension = function (model) {
  * @private
  */
 ModelOutlineLoader.outlinePrimitives = function (model) {
-  if (!ModelOutlineLoader.hasExtension(model)) {
+  if (
+    !ModelOutlineLoader.hasExtension(model) &&
+    !ModelOutlineLoader.shouldGenerateOutlines(model)
+  ) {
     return;
   }
 
-  var gltf = model.gltf;
+  if (ModelOutlineLoader.shouldGenerateOutlines(model)) {
+    ModelOutlineGenerator.generateOutlinesForModel(model);
+  }
 
-  ModelOutlineGenerator.generateOutlinesForModel(model);
+  var gltf = model.gltf;
 
   // Assumption: A single bufferView contains a single zero-indexed range of vertices.
   // No trickery with using large accessor byteOffsets to store multiple zero-based
@@ -59,9 +100,9 @@ ModelOutlineLoader.outlinePrimitives = function (model) {
 
   ForEach.mesh(gltf, function (mesh, meshId) {
     ForEach.meshPrimitive(mesh, function (primitive, primitiveId) {
-      // if (!defined(primitive.extensions)) {
-      //   return;
-      // }
+      if (!defined(primitive.extensions)) {
+        return;
+      }
 
       var outlineData = primitive.extensions.CESIUM_primitive_outline;
       if (!defined(outlineData)) {

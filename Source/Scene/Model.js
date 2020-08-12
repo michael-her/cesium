@@ -75,6 +75,7 @@ import processModelMaterialsCommon from "./processModelMaterialsCommon.js";
 import processPbrMaterials from "./processPbrMaterials.js";
 import SceneMode from "./SceneMode.js";
 import ShadowMode from "./ShadowMode.js";
+import OutlineGenerationMode from "./OutlineGenerationMode.js";
 
 var boundingSphereCartesian3Scratch = new Cartesian3();
 
@@ -316,6 +317,17 @@ function Model(options) {
    * @default 0.0
    */
   this.silhouetteSize = defaultValue(options.silhouetteSize, 0.0);
+
+  /**
+   * Determines whether outlines should be generated for this model.
+   *
+   * @type {OutlineGenerationMode}
+   *
+   * @default OutlineGenerationMode.USE_GLTF_SETTINGS
+   *
+   * @see ModelOutlineGenerator
+   */
+  this.generateOutlines = OutlineGenerationMode.USE_GLTF_SETTINGS;
 
   /**
    * The 4x4 transformation matrix that transforms the model from model to world coordinates.
@@ -2454,16 +2466,15 @@ function createProgram(programToCreate, model, context) {
   var drawVS = modifyShader(vs, programId, model._vertexShaderLoaded);
   var drawFS = modifyShader(fs, programId, model._fragmentShaderLoaded);
 
-
-    if (isOutline) {
-      drawFS = drawFS.replace(
-        "czm_writeLogDepth();",
-        "    czm_writeLogDepth();\n" +
-          "#if defined(LOG_DEPTH) && !defined(DISABLE_LOG_DEPTH_FRAGMENT_WRITE)\n" +
-          "    gl_FragDepthEXT -= 5e-5;\n" +
-          "#endif"
-      );
-    }
+  if (isOutline) {
+    drawFS = drawFS.replace(
+      "czm_writeLogDepth();",
+      "    czm_writeLogDepth();\n" +
+        "#if defined(LOG_DEPTH) && !defined(DISABLE_LOG_DEPTH_FRAGMENT_WRITE)\n" +
+        "    gl_FragDepthEXT -= 5e-5;\n" +
+        "#endif"
+    );
+  }
   if (!defined(model._uniformMapLoaded)) {
     drawFS = "uniform vec4 czm_pickColor;\n" + drawFS;
   }
@@ -2582,17 +2593,16 @@ function recreateProgram(programToCreate, model, context) {
   var drawVS = modifyShader(vs, programId, model._vertexShaderLoaded);
   var drawFS = modifyShader(finalFS, programId, model._fragmentShaderLoaded);
 
-
-    var isOutline = program.isOutline;
-    if (isOutline) {
-      drawFS = drawFS.replace(
-        "czm_writeLogDepth();",
-        "    czm_writeLogDepth();\n" +
-          "#if defined(LOG_DEPTH) && !defined(DISABLE_LOG_DEPTH_FRAGMENT_WRITE)\n" +
-          "    gl_FragDepthEXT -= 5e-5;\n" +
-          "#endif"
-      );
-    }
+  var isOutline = program.isOutline;
+  if (isOutline) {
+    drawFS = drawFS.replace(
+      "czm_writeLogDepth();",
+      "    czm_writeLogDepth();\n" +
+        "#if defined(LOG_DEPTH) && !defined(DISABLE_LOG_DEPTH_FRAGMENT_WRITE)\n" +
+        "    gl_FragDepthEXT -= 5e-5;\n" +
+        "#endif"
+    );
+  }
   if (!defined(model._uniformMapLoaded)) {
     drawFS = "uniform vec4 czm_pickColor;\n" + drawFS;
   }
@@ -5276,6 +5286,7 @@ Model.prototype.update = function (frameState) {
 
           var options = {
             addBatchIdToGeneratedShaders: this._addBatchIdToGeneratedShaders,
+            outlineGenerationMode: this.generateOutlines,
           };
 
           processModelMaterialsCommon(gltf, options);
