@@ -2,14 +2,13 @@ import ForEach from "../ThirdParty/GltfPipeline/ForEach.js";
 import WebGLConstants from "../Core/WebGLConstants.js";
 import defined from "../Core/defined.js";
 import Cartesian3 from "../Core/Cartesian3.js";
-import ModelUtility from "../Scene/ModelUtility.js";
 
 function ModelOutlineGenerator() {}
 
 ModelOutlineGenerator.generateOutlinesForModel = function (model) {
   var gltf = model.gltf;
   ForEach.mesh(gltf, function (mesh, meshId) {
-    ForEach.meshPrimitive(mesh, function (primitive, primitiveId) {
+    ForEach.meshPrimitive(mesh, function (_primitive, primitiveId) {
       outlinePrimitive(model, meshId, primitiveId);
     });
   });
@@ -68,8 +67,6 @@ function outlinePrimitive(model, meshId, primitiveId) {
           triangleIndexAccessorGltf.count
         );
 
-  var triangleGetter = generateVertexAttributeGetter(triangleIndices, 3);
-
   var halfEdgeMap = new Map();
   var vertexPositionGetter = generateVertexAttributeGetter(
     positions,
@@ -84,9 +81,6 @@ function outlinePrimitive(model, meshId, primitiveId) {
       vertexPositionGetter
     );
   }
-  // for (let i = 0; i < positionAccessorGltf.count; i += 3) {
-  //   addTriangleToEdgeGraph(halfEdgeMap, i, vertexPositionGetter);
-  // }
 
   var normalBufferView = loadResources.getBuffer(normalBufferViewGltf);
   var normals = new Float32Array(
@@ -113,7 +107,7 @@ function outlinePrimitive(model, meshId, primitiveId) {
         .outlineWhenAngleBetweenFaceNormalsExceeds;
   }
 
-  let outlineIndexBuffer = findEdgesToOutline(
+  var outlineIndexBuffer = findEdgesToOutline(
     halfEdgeMap,
     vertexNormalGetter,
     triangleIndices,
@@ -133,7 +127,7 @@ function outlinePrimitive(model, meshId, primitiveId) {
   loadResources.buffers[bufferId] = outlineIndexBuffer;
 
   // Add new bufferview
-  let bufferViewId =
+  var bufferViewId =
     bufferViews.push({
       buffer: bufferId,
       byteOffset: 0,
@@ -142,7 +136,7 @@ function outlinePrimitive(model, meshId, primitiveId) {
     }) - 1;
 
   // Add new accessor
-  let accessorId =
+  var accessorId =
     accessors.push({
       bufferView: bufferViewId,
       byteOffset: 0,
@@ -174,24 +168,24 @@ function addIndexedTriangleToEdgeGraph(
   triangleIndices,
   vertexPositionGetter
 ) {
-  let vertexIndexA = triangleIndices[triangleStartIndex];
-  let vertexIndexB = triangleIndices[triangleStartIndex + 1];
-  let vertexIndexC = triangleIndices[triangleStartIndex + 2];
-  let first = addHalfEdge(
+  var vertexIndexA = triangleIndices[triangleStartIndex];
+  var vertexIndexB = triangleIndices[triangleStartIndex + 1];
+  var vertexIndexC = triangleIndices[triangleStartIndex + 2];
+  var first = addHalfEdge(
     halfEdgeMap,
     vertexPositionGetter,
     vertexIndexA,
     vertexIndexB,
     triangleStartIndex
   );
-  let second = addHalfEdge(
+  var second = addHalfEdge(
     halfEdgeMap,
     vertexPositionGetter,
     vertexIndexB,
     vertexIndexC,
     triangleStartIndex
   );
-  let last = addHalfEdge(
+  var last = addHalfEdge(
     halfEdgeMap,
     vertexPositionGetter,
     vertexIndexC,
@@ -200,21 +194,21 @@ function addIndexedTriangleToEdgeGraph(
   );
 
   // and the other direction...
-  let first2 = addHalfEdge(
+  var first2 = addHalfEdge(
     halfEdgeMap,
     vertexPositionGetter,
     vertexIndexC,
     vertexIndexB,
     triangleStartIndex
   );
-  let second2 = addHalfEdge(
+  var second2 = addHalfEdge(
     halfEdgeMap,
     vertexPositionGetter,
     vertexIndexB,
     vertexIndexA,
     triangleStartIndex
   );
-  let last2 = addHalfEdge(
+  var last2 = addHalfEdge(
     halfEdgeMap,
     vertexPositionGetter,
     vertexIndexA,
@@ -223,50 +217,6 @@ function addIndexedTriangleToEdgeGraph(
   );
 }
 
-// function addTriangleToEdgeGraph(
-//   halfEdgeMap,
-//   triangleStartIndex,
-//   vertexPositionGetter
-// ) {
-//   let first = addHalfEdge(
-//     halfEdgeMap,
-//     vertexPositionGetter,
-//     triangleStartIndex,
-//     triangleStartIndex + 1,
-//     undefined
-//   );
-//   let second = addHalfEdge(
-//     halfEdgeMap,
-//     vertexPositionGetter,
-//     triangleStartIndex + 1,
-//     triangleStartIndex + 2
-//   );
-//   let last = addHalfEdge(
-//     halfEdgeMap,
-//     vertexPositionGetter,
-//     triangleStartIndex + 2,
-//     triangleStartIndex
-//   );
-//   let first2 = addHalfEdge(
-//     halfEdgeMap,
-//     vertexPositionGetter,
-//     triangleStartIndex + 2,
-//     triangleStartIndex + 1
-//   );
-//   let second2 = addHalfEdge(
-//     halfEdgeMap,
-//     vertexPositionGetter,
-//     triangleStartIndex + 1,
-//     triangleStartIndex
-//   );
-//   let last2 = addHalfEdge(
-//     halfEdgeMap,
-//     vertexPositionGetter,
-//     triangleStartIndex,
-//     triangleStartIndex + 2
-//   );
-// }
-
 function addHalfEdge(
   halfEdgeMap,
   vertexPositionGetter,
@@ -274,7 +224,7 @@ function addHalfEdge(
   destinationVertexIdx,
   triangleIndex
 ) {
-  const halfEdge = {
+  var halfEdge = {
     sourceVertex: vertexPositionGetter(sourceVertexIdx),
     destinationVertex: vertexPositionGetter(destinationVertexIdx),
     originalIdx: [sourceVertexIdx],
@@ -283,11 +233,11 @@ function addHalfEdge(
   if (defined(triangleIndex)) {
     halfEdge.triangleStartIndex = [triangleIndex];
   }
-  const mapIdx = generateMapKey(
+  var mapIdx = generateMapKey(
     halfEdge.sourceVertex,
     halfEdge.destinationVertex
   );
-  const halfEdgeFromMap = halfEdgeMap.get(mapIdx);
+  var halfEdgeFromMap = halfEdgeMap.get(mapIdx);
   if (halfEdgeFromMap) {
     halfEdgeFromMap.originalIdx.push(sourceVertexIdx);
     halfEdgeFromMap.destinationIdx.push(destinationVertexIdx);
@@ -314,9 +264,9 @@ function generateMapKey(sourceVertex, destinationVertex) {
 }
 
 function getNeighboringEdge(halfEdgeMap, edge) {
-  const neighborIdx = generateMapKey(edge.destinationVertex, edge.sourceVertex);
-  let neighbor = halfEdgeMap.get(neighborIdx);
-  const tolerance = Number.EPSILON;
+  var neighborIdx = generateMapKey(edge.destinationVertex, edge.sourceVertex);
+  var neighbor = halfEdgeMap.get(neighborIdx);
+  var tolerance = Number.EPSILON;
   if (
     neighbor &&
     (Math.abs(neighbor.destinationVertex[0] - edge.sourceVertex[0]) >
@@ -333,14 +283,14 @@ function getNeighboringEdge(halfEdgeMap, edge) {
 
 // Returns index of first vertex of triangle
 function getFirstVertexOfFaces(halfEdge, triangleIndices) {
-  const faces = [];
+  var faces = [];
   if (halfEdge.triangleStartIndex) {
-    for (let index of halfEdge.triangleStartIndex) {
+    for (var index of halfEdge.triangleStartIndex) {
       faces.push(triangleIndices[index]);
     }
   } else {
-    for (let index of halfEdge.originalIdx) {
-      const triangleStart = index - (index % 3);
+    for (var index of halfEdge.originalIdx) {
+      var triangleStart = index - (index % 3);
       faces.push(triangleStart);
     }
   }
@@ -354,21 +304,21 @@ function findEdgesToOutline(
   minimumAngle
 ) {
   var outlineThese = [];
-  const checked = new Set();
-  const allEdges = Array.from(halfEdgeMap.values());
-  for (let i = 0; i < allEdges.length; i++) {
-    const edge = allEdges[i];
+  var checked = new Set();
+  var allEdges = Array.from(halfEdgeMap.values());
+  for (var i = 0; i < allEdges.length; i++) {
+    var edge = allEdges[i];
     if (
       checked.has(generateMapKey(edge.sourceVertex, edge.destinationVertex)) ||
       checked.has(generateMapKey(edge.destinationVertex, edge.sourceVertex))
     ) {
       continue;
     }
-    const neighbor = getNeighboringEdge(halfEdgeMap, edge);
+    var neighbor = getNeighboringEdge(halfEdgeMap, edge);
     if (!defined(neighbor)) {
       continue;
     }
-    const numIndicesToCheck = 21;
+    var numIndicesToCheck = 21;
     if (edge.originalIdx.length > numIndicesToCheck) {
       edge.originalIdx = edge.originalIdx.slice(0, numIndicesToCheck);
     }
@@ -379,25 +329,25 @@ function findEdgesToOutline(
     // there is something wrong with your face logic
     // why do you need the first vertex of every face?
     // why not just use the ones attached to the edge?
-    const primaryEdgeFaces = getFirstVertexOfFaces(edge, triangleIndices);
-    const neighbourEdgeFaces = getFirstVertexOfFaces(neighbor, triangleIndices);
-    let highlight = false;
-    let highlightStartVertex;
-    let highlightEndVertex;
-    for (let i = 0; i < primaryEdgeFaces.length; i++) {
+    var primaryEdgeFaces = getFirstVertexOfFaces(edge, triangleIndices);
+    var neighbourEdgeFaces = getFirstVertexOfFaces(neighbor, triangleIndices);
+    var highlight = false;
+    var highlightStartVertex;
+    var highlightEndVertex;
+    for (var i = 0; i < primaryEdgeFaces.length; i++) {
       if (highlight) {
         break;
       }
-      const faceNormal = vertexNormalGetter(primaryEdgeFaces[i]);
-      for (let j = 0; j < neighbourEdgeFaces.length; j++) {
+      var faceNormal = vertexNormalGetter(primaryEdgeFaces[i]);
+      for (var j = 0; j < neighbourEdgeFaces.length; j++) {
         if (primaryEdgeFaces[i] === neighbourEdgeFaces[j]) {
           continue;
         }
-        const neighborNormal = vertexNormalGetter(neighbourEdgeFaces[j]);
+        var neighborNormal = vertexNormalGetter(neighbourEdgeFaces[j]);
         if (!defined(faceNormal) || !defined(neighborNormal)) {
           continue;
         }
-        let angleBetween;
+        var angleBetween;
         try {
           angleBetween = Cartesian3.angleBetween(
             Cartesian3.fromArray(faceNormal),
