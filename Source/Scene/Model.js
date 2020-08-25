@@ -327,7 +327,7 @@ function Model(options) {
    *
    * @see ModelOutlineGenerator
    */
-  this.generateOutlines = OutlineGenerationMode.USE_GLTF_SETTINGS;
+  this.outlineGenerationMode = defaultValue(options.outlineGenerationMode, OutlineGenerationMode.USE_GLTF_SETTINGS);
 
   /**
    * The 4x4 transformation matrix that transforms the model from model to world coordinates.
@@ -5286,7 +5286,7 @@ Model.prototype.update = function (frameState) {
 
           var options = {
             addBatchIdToGeneratedShaders: this._addBatchIdToGeneratedShaders,
-            outlineGenerationMode: this.generateOutlines,
+            outlineGenerationMode: this.outlineGenerationMode,
           };
 
           processModelMaterialsCommon(gltf, options);

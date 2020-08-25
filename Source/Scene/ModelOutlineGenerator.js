@@ -30,6 +30,9 @@ function outlinePrimitive(model, meshId, primitiveId) {
   var positionBufferViewGltf = bufferViews[positionAccessorGltf.bufferView];
   // TODO: Error handling for no normals
   var normalAccessorGltf = accessors[primitive.attributes.NORMAL];
+  if (!defined(normalAccessorGltf.bufferView)) {
+    normalAccessorGltf.bufferView = 0;
+  }
   var normalBufferViewGltf = bufferViews[normalAccessorGltf.bufferView];
 
   if (!defined(normalBufferViewGltf.byteStride)) {

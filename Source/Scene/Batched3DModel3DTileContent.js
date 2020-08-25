@@ -433,6 +433,7 @@ function initialize(content, arrayBuffer, byteOffset) {
       sphericalHarmonicCoefficients: tileset.sphericalHarmonicCoefficients,
       specularEnvironmentMaps: tileset.specularEnvironmentMaps,
       backFaceCulling: tileset.backFaceCulling,
+      outlineGenerationMode: tileset.outlineGenerationMode
     });
     content._model.readyPromise.then(function (model) {
       model.activeAnimations.addAll({
@@ -541,6 +542,7 @@ Batched3DModel3DTileContent.prototype.update = function (tileset, frameState) {
   this._model.sphericalHarmonicCoefficients = this._tileset.sphericalHarmonicCoefficients;
   this._model.specularEnvironmentMaps = this._tileset.specularEnvironmentMaps;
   this._model.backFaceCulling = this._tileset.backFaceCulling;
+  this._model.outlineGenerationMode = this._tileset.outlineGenerationMode;
   this._model.debugWireframe = this._tileset.debugWireframe;
 
   // Update clipping planes

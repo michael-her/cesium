@@ -36,7 +36,7 @@ ModelOutlineLoader.hasExtension = function (model) {
  * @private
  */
 ModelOutlineLoader.shouldGenerateOutlines = function (model) {
-  if (model.generateOutlines === OutlineGenerationMode.ON) {
+  if (model.outlineGenerationMode === OutlineGenerationMode.ON) {
     return true;
   }
 
