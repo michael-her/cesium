@@ -8,7 +8,7 @@ import TextureMinificationFilter from "../Renderer/TextureMinificationFilter.js"
 import TextureWrap from "../Renderer/TextureWrap.js";
 import ForEach from "../ThirdParty/GltfPipeline/ForEach.js";
 import ModelOutlineGenerator from "./ModelOutlineGenerator.js";
-import OutlineGenerationMode from "./OutlineGenerationMode.js";
+import ModelOutlineGenerationMode from "./ModelOutlineGenerationMode.js";
 
 // glTF does not allow an index value of 65535 because this is the primitive
 // restart value in some APIs.
@@ -36,7 +36,7 @@ ModelOutlineLoader.hasExtension = function (model) {
  * @private
  */
 ModelOutlineLoader.shouldGenerateOutlines = function (model) {
-  if (model.outlineGenerationMode === OutlineGenerationMode.ON) {
+  if (model.outlineGenerationMode === ModelOutlineGenerationMode.ON) {
     return true;
   }
 
@@ -58,7 +58,7 @@ ModelOutlineLoader.shouldGenerateOutlines = function (model) {
     });
   }
   if (
-    model.generateOutlines === OutlineGenerationMode.USE_GLTF_SETTINGS &&
+    model.generateOutlines === ModelOutlineGenerationMode.USE_GLTF_SETTINGS &&
     outlineGenerationRequestedInGltf
   ) {
     return true;

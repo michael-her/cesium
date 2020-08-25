@@ -75,7 +75,7 @@ import processModelMaterialsCommon from "./processModelMaterialsCommon.js";
 import processPbrMaterials from "./processPbrMaterials.js";
 import SceneMode from "./SceneMode.js";
 import ShadowMode from "./ShadowMode.js";
-import OutlineGenerationMode from "./OutlineGenerationMode.js";
+import ModelOutlineGenerationMode from "./ModelOutlineGenerationMode.js";
 
 var boundingSphereCartesian3Scratch = new Cartesian3();
 
@@ -321,13 +321,13 @@ function Model(options) {
   /**
    * Determines whether outlines should be generated for this model.
    *
-   * @type {OutlineGenerationMode}
+   * @type {ModelOutlineGenerationMode}
    *
-   * @default OutlineGenerationMode.USE_GLTF_SETTINGS
+   * @default ModelOutlineGenerationMode.USE_GLTF_SETTINGS
    *
    * @see ModelOutlineGenerator
    */
-  this.outlineGenerationMode = defaultValue(options.outlineGenerationMode, OutlineGenerationMode.USE_GLTF_SETTINGS);
+  this.outlineGenerationMode = defaultValue(options.outlineGenerationMode, ModelOutlineGenerationMode.USE_GLTF_SETTINGS);
 
   /**
    * The 4x4 transformation matrix that transforms the model from model to world coordinates.

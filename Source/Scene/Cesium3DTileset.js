@@ -43,7 +43,7 @@ import StencilConstants from "./StencilConstants.js";
 import TileBoundingRegion from "./TileBoundingRegion.js";
 import TileBoundingSphere from "./TileBoundingSphere.js";
 import TileOrientedBoundingBox from "./TileOrientedBoundingBox.js";
-import OutlineGenerationMode from "./OutlineGenerationMode.js";
+import ModelOutlineGenerationMode from "./ModelOutlineGenerationMode.js";
 
 /**
  * A {@link https://github.com/CesiumGS/3d-tiles/tree/master/specification|3D Tiles tileset},
@@ -91,7 +91,7 @@ import OutlineGenerationMode from "./OutlineGenerationMode.js";
  * @param {Cartesian3[]} [options.sphericalHarmonicCoefficients] The third order spherical harmonic coefficients used for the diffuse color of image-based lighting.
  * @param {String} [options.specularEnvironmentMaps] A URL to a KTX file that contains a cube map of the specular lighting and the convoluted specular mipmaps.
  * @param {Boolean} [options.backFaceCulling=true] Whether to cull back-facing geometry. When true, back face culling is determined by the glTF material's doubleSided property; when false, back face culling is disabled.
- * @param {OutlineGenerationMode} [options.outlineGenerationMode=OutlineGenerationMode.USE_GLTF_SETTINGS]
+ * @param {ModelOutlineGenerationMode} [options.outlineGenerationMode=ModelOutlineGenerationMode.USE_GLTF_SETTINGS]
  * @param {String} [options.debugHeatmapTilePropertyName] The tile variable to colorize as a heatmap. All rendered tiles will be colorized relative to each other's specified variable value.
  * @param {Boolean} [options.debugFreezeFrame=false] For debugging only. Determines if only the tiles from last frame should be used for rendering.
  * @param {Boolean} [options.debugColorizeTiles=false] For debugging only. When true, assigns a random color to each tile.
@@ -764,7 +764,7 @@ function Cesium3DTileset(options) {
 
   this.outlineGenerationMode = defaultValue(
     options.outlineGenerationMode,
-    OutlineGenerationMode.USE_GLTF_SETTINGS
+    ModelOutlineGenerationMode.USE_GLTF_SETTINGS
   );
 
   /**

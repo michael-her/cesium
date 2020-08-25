@@ -16,7 +16,7 @@ import ForEach from "../ThirdParty/GltfPipeline/ForEach.js";
 import hasExtension from "../ThirdParty/GltfPipeline/hasExtension.js";
 import AttributeType from "./AttributeType.js";
 import Axis from "./Axis.js";
-import OutlineGenerationMode from "./OutlineGenerationMode.js";
+import ModelOutlineGenerationMode from "./ModelOutlineGenerationMode.js";
 
 /**
  * @private
@@ -87,8 +87,8 @@ ModelUtility.splitIncompatibleMaterials = function (
       var hasTangents = defined(primitive.attributes.TANGENT);
       var hasTexCoords = defined(primitive.attributes.TEXCOORD_0);
       var hasOutline =
-        outlineGenerationMode === OutlineGenerationMode.ON ||
-        (OutlineGenerationMode.USE_GLTF_SETTINGS &&
+        outlineGenerationMode === ModelOutlineGenerationMode.ON ||
+        (ModelOutlineGenerationMode.USE_GLTF_SETTINGS &&
           defined(primitive.extensions) &&
           defined(primitive.extensions.CESIUM_primitive_outline));
 

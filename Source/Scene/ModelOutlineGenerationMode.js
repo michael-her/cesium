@@ -9,10 +9,10 @@
  *
  * @see Model.generateOutlines
  */
-var OutlineGenerationMode = {
+var ModelOutlineGenerationMode = {
   OFF: 0,
   ON: 1,
   USE_GLTF_SETTINGS: 2,
 };
 
-export default Object.freeze(OutlineGenerationMode);
+export default Object.freeze(ModelOutlineGenerationMode);

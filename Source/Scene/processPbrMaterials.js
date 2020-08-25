@@ -6,13 +6,13 @@ import addToArray from "../ThirdParty/GltfPipeline/addToArray.js";
 import ForEach from "../ThirdParty/GltfPipeline/ForEach.js";
 import hasExtension from "../ThirdParty/GltfPipeline/hasExtension.js";
 import ModelUtility from "./ModelUtility.js";
-import OutlineGenerationMode from "./OutlineGenerationMode.js";
+import ModelOutlineGenerationMode from "./ModelOutlineGenerationMode.js";
 
 /**
  * @private
  */
 function processPbrMaterials(gltf, options) {
-  options = defaultValue(options, {outlineGenerationMode: OutlineGenerationMode.USE_GLTF_SETTINGS});
+  options = defaultValue(options, {outlineGenerationMode: ModelOutlineGenerationMode.USE_GLTF_SETTINGS});
 
   // No need to create new techniques if they already exist,
   // the shader should handle these values
