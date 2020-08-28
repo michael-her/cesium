@@ -2,96 +2,151 @@ import ForEach from "../ThirdParty/GltfPipeline/ForEach.js";
 import WebGLConstants from "../Core/WebGLConstants.js";
 import defined from "../Core/defined.js";
 import Cartesian3 from "../Core/Cartesian3.js";
+import { DeveloperError } from "../Core/DeveloperError.js";
 
+// glTF does not allow an index value of 65535 because this is the primitive
+// restart value in some APIs.
+var MAX_GLTF_UINT16_INDEX = 65534;
 function ModelOutlineGenerator() {}
 
 ModelOutlineGenerator.generateOutlinesForModel = function (model) {
   var gltf = model.gltf;
+  var outlineAny = false;
   ForEach.mesh(gltf, function (mesh, meshId) {
     ForEach.meshPrimitive(mesh, function (_primitive, primitiveId) {
-      outlinePrimitive(model, meshId, primitiveId);
+      outlineAny = outlinePrimitive(model, meshId, primitiveId) || outlineAny;
     });
   });
+  return outlineAny;
 };
 
 function outlinePrimitive(model, meshId, primitiveId) {
-  // TODO: Currently only works for indexed primitives
   var gltf = model.gltf;
   var mesh = gltf.meshes[meshId];
   var primitive = mesh.primitives[primitiveId];
   var accessors = gltf.accessors;
   var bufferViews = gltf.bufferViews;
-  // TODO: handle unindexed tris
   var triangleIndexAccessorGltf = accessors[primitive.indices];
-  var triangleIndexBufferViewGltf =
-    bufferViews[triangleIndexAccessorGltf.bufferView];
+  var triangleIndexBufferViewGltf;
+  var indexedTriangleMode = false;
+  if (defined(triangleIndexAccessorGltf)) {
+    triangleIndexBufferViewGltf =
+      bufferViews[triangleIndexAccessorGltf.bufferView];
+    indexedTriangleMode = true;
+  }
   var positionAccessorGltf = accessors[primitive.attributes.POSITION];
   var positionBufferViewGltf = bufferViews[positionAccessorGltf.bufferView];
-  // TODO: Error handling for no normals
   var normalAccessorGltf = accessors[primitive.attributes.NORMAL];
-  if (!defined(normalAccessorGltf.bufferView)) {
-    normalAccessorGltf.bufferView = 0;
+  if (!defined(normalAccessorGltf)) {
+    // Can't outline this model because it has no normals
+    return false;
   }
   var normalBufferViewGltf = bufferViews[normalAccessorGltf.bufferView];
 
   if (!defined(normalBufferViewGltf.byteStride)) {
-    normalBufferViewGltf.byteStride = 12;
+    normalBufferViewGltf.byteStride = Float32Array.BYTES_PER_ELEMENT * 3;
   }
   if (!defined(positionBufferViewGltf.byteStride)) {
-    positionBufferViewGltf.byteStride = 12;
+    positionBufferViewGltf.byteStride = Float32Array.BYTES_PER_ELEMENT * 3;
   }
 
   var loadResources = model._loadResources;
-  var triangleIndexBufferView = loadResources.getBuffer(
-    triangleIndexBufferViewGltf
-  );
+
+  var triangleIndexBufferView;
+  if (indexedTriangleMode) {
+    triangleIndexBufferView = loadResources.getBuffer(
+      triangleIndexBufferViewGltf
+    );
+  }
+
   var positionBufferView = loadResources.getBuffer(positionBufferViewGltf);
   var positions = new Float32Array(
     positionBufferView.buffer,
     positionBufferView.byteOffset + positionAccessorGltf.byteOffset,
-    positionAccessorGltf.count * 3
+    positionAccessorGltf.count * 3 //x, y, z
   );
 
-  var triangleIndices =
-    triangleIndexAccessorGltf.componentType === WebGLConstants.UNSIGNED_SHORT
-      ? new Uint16Array(
-          triangleIndexBufferView.buffer,
-          triangleIndexBufferView.byteOffset +
-            triangleIndexAccessorGltf.byteOffset,
-          triangleIndexAccessorGltf.count
-        )
-      : new Uint32Array(
-          triangleIndexBufferView.buffer,
-          triangleIndexBufferView.byteOffset +
-            triangleIndexAccessorGltf.byteOffset,
-          triangleIndexAccessorGltf.count
-        );
+  var normalBufferView = loadResources.getBuffer(normalBufferViewGltf);
+  var normals = new Float32Array(
+    normalBufferView.buffer,
+    normalBufferView.byteOffset + normalAccessorGltf.byteOffset,
+    normalAccessorGltf.count * 3 //x, y, z
+  );
+  var vertexNormalGetter = generateVertexAttributeGetter(
+    normals,
+    normalBufferViewGltf.byteStride / Float32Array.BYTES_PER_ELEMENT
+  );
 
+  var triangleIndices;
+  if (indexedTriangleMode) {
+    triangleIndices =
+      triangleIndexAccessorGltf.componentType === WebGLConstants.UNSIGNED_SHORT
+        ? new Uint16Array(
+            triangleIndexBufferView.buffer,
+            triangleIndexBufferView.byteOffset +
+              triangleIndexAccessorGltf.byteOffset,
+            triangleIndexAccessorGltf.count
+          )
+        : new Uint32Array(
+            triangleIndexBufferView.buffer,
+            triangleIndexBufferView.byteOffset +
+              triangleIndexAccessorGltf.byteOffset,
+            triangleIndexAccessorGltf.count
+          );
+  }
+
+  /*
+   * To figure out which faces are adjacent in this mesh, we put its edges into a directed half edge map.
+   *
+   * The version used here is adapted from the one described in [this paper](https://www.graphics.rwth-aachen.de/media/papers/directed.pdf).
+   *         A
+   *        / ^
+   *       /   \
+   *      v  1  \
+   *    B -----> C
+   *      <-----
+   *     \   2  ^
+   *      \    /
+   *       v  /
+   *        D
+   * Each face is represented by 3 directed half edges. For example, face 1 is made up of:
+   * A -> B
+   * B -> C
+   * C -> A
+   *
+   * Each edge has a neighbor connecting the same vertices but in the opposite direction. In the diagram above, B->C's neighbor is C->B.
+   * For each of a face's half edges, we can get its' neighbor, and therefore the face that neighbor belongs to.
+   *
+   */
   var halfEdgeMap = new Map();
   var vertexPositionGetter = generateVertexAttributeGetter(
     positions,
     positionBufferViewGltf.byteStride / 4
   );
 
-  for (let i = 0; i < triangleIndexAccessorGltf.count; i += 3) {
-    addIndexedTriangleToEdgeGraph(
-      halfEdgeMap,
-      i,
-      triangleIndices,
-      vertexPositionGetter
-    );
+  // Populate our half edge map
+  if (indexedTriangleMode) {
+    for (var i = 0; i < triangleIndexAccessorGltf.count; i += 3) {
+      addTriangleToEdgeGraph(
+        halfEdgeMap,
+        undefined,
+        i,
+        triangleIndices,
+        vertexPositionGetter
+      );
+    }
+  } else {
+    for (var j = 0; j < positionAccessorGltf.count; j += 3) {
+      addTriangleToEdgeGraph(
+        halfEdgeMap,
+        j,
+        undefined,
+        undefined,
+        vertexPositionGetter
+      );
+    }
   }
 
-  var normalBufferView = loadResources.getBuffer(normalBufferViewGltf);
-  var normals = new Float32Array(
-    normalBufferView.buffer,
-    normalBufferView.byteOffset + normalAccessorGltf.byteOffset,
-    normalAccessorGltf.count * (normalBufferViewGltf.byteStride / 4)
-  );
-  var vertexNormalGetter = generateVertexAttributeGetter(
-    normals,
-    normalBufferViewGltf.byteStride / 4
-  );
   var minimumAngle = Math.PI / 20;
 
   if (
@@ -113,6 +168,11 @@ function outlinePrimitive(model, meshId, primitiveId) {
     triangleIndices,
     minimumAngle
   );
+
+  if (outlineIndexBuffer.length === 0) {
+    //No edges to outline
+    return false;
+  }
 
   // Add new buffer to gltf
   var bufferId =
@@ -140,7 +200,10 @@ function outlinePrimitive(model, meshId, primitiveId) {
     accessors.push({
       bufferView: bufferViewId,
       byteOffset: 0,
-      componentType: WebGLConstants.UNSIGNED_INT,
+      componentType:
+        outlineIndexBuffer instanceof Uint16Array
+          ? WebGLConstants.UNSIGNED_SHORT
+          : WebGLConstants.UNSIGNED_INT,
       count: outlineIndexBuffer.length, // start and end for each line
     }) - 1;
 
@@ -150,6 +213,8 @@ function outlinePrimitive(model, meshId, primitiveId) {
     },
   };
   gltf.extensionsUsed.push("CESIUM_primitive_outline");
+
+  return true;
 }
 
 function generateVertexAttributeGetter(vertexArray, elementsPerVertex) {
@@ -162,59 +227,49 @@ function generateVertexAttributeGetter(vertexArray, elementsPerVertex) {
   };
 }
 
-function addIndexedTriangleToEdgeGraph(
+function addTriangleToEdgeGraph(
   halfEdgeMap,
-  triangleStartIndex,
+  firstVertexIndex,
+  triangleStartIndex, // in indexedTriangle mode, this is an index into the index buffer. otherwise it's an index to the vertex positions
   triangleIndices,
   vertexPositionGetter
 ) {
-  var vertexIndexA = triangleIndices[triangleStartIndex];
-  var vertexIndexB = triangleIndices[triangleStartIndex + 1];
-  var vertexIndexC = triangleIndices[triangleStartIndex + 2];
-  var first = addHalfEdge(
-    halfEdgeMap,
-    vertexPositionGetter,
-    vertexIndexA,
-    vertexIndexB,
-    triangleStartIndex
-  );
-  var second = addHalfEdge(
-    halfEdgeMap,
-    vertexPositionGetter,
-    vertexIndexB,
-    vertexIndexC,
-    triangleStartIndex
-  );
-  var last = addHalfEdge(
-    halfEdgeMap,
-    vertexPositionGetter,
-    vertexIndexC,
-    vertexIndexA,
-    triangleStartIndex
-  );
+  var vertexIndexA, vertexIndexB, vertexIndexC;
+  // Each vertex in the triangle
+  if (defined(triangleStartIndex) && defined(triangleIndices)) {
+    vertexIndexA = triangleIndices[triangleStartIndex];
+    vertexIndexB = triangleIndices[triangleStartIndex + 1];
+    vertexIndexC = triangleIndices[triangleStartIndex + 2];
+  } else if (defined(firstVertexIndex)) {
+    vertexIndexA = firstVertexIndex;
+    vertexIndexB = firstVertexIndex + 1;
+    vertexIndexC = firstVertexIndex + 2;
+  } else {
+    throw new DeveloperError(
+      "Either firstVertexIndex, or triangleStartIndex and triangleIndices, must be provided."
+    );
+  }
 
-  // and the other direction...
-  var first2 = addHalfEdge(
-    halfEdgeMap,
-    vertexPositionGetter,
-    vertexIndexC,
-    vertexIndexB,
-    triangleStartIndex
-  );
-  var second2 = addHalfEdge(
-    halfEdgeMap,
-    vertexPositionGetter,
-    vertexIndexB,
-    vertexIndexA,
-    triangleStartIndex
-  );
-  var last2 = addHalfEdge(
-    halfEdgeMap,
-    vertexPositionGetter,
-    vertexIndexA,
-    vertexIndexC,
-    triangleStartIndex
-  );
+  // Each half edge in the triangle (one in each direction)
+  var edgePairs = [
+    [vertexIndexA, vertexIndexB],
+    [vertexIndexB, vertexIndexC],
+    [vertexIndexC, vertexIndexA],
+    [vertexIndexC, vertexIndexB],
+    [vertexIndexB, vertexIndexA],
+    [vertexIndexA, vertexIndexC],
+  ];
+
+  for (var i = 0; i < edgePairs.length; i++) {
+    var pair = edgePairs[i];
+    addHalfEdge(
+      halfEdgeMap,
+      vertexPositionGetter,
+      pair[0],
+      pair[1],
+      triangleStartIndex
+    );
+  }
 }
 
 function addHalfEdge(
@@ -265,32 +320,21 @@ function generateMapKey(sourceVertex, destinationVertex) {
 
 function getNeighboringEdge(halfEdgeMap, edge) {
   var neighborIdx = generateMapKey(edge.destinationVertex, edge.sourceVertex);
-  var neighbor = halfEdgeMap.get(neighborIdx);
-  var tolerance = Number.EPSILON;
-  if (
-    neighbor &&
-    (Math.abs(neighbor.destinationVertex[0] - edge.sourceVertex[0]) >
-      tolerance ||
-      Math.abs(neighbor.destinationVertex[1] - edge.sourceVertex[1]) >
-        tolerance ||
-      Math.abs(neighbor.destinationVertex[2] - edge.sourceVertex[2]) >
-        tolerance)
-  ) {
-    return undefined;
-  }
-  return neighbor;
+  return halfEdgeMap.get(neighborIdx);
 }
 
 // Returns index of first vertex of triangle
 function getFirstVertexOfFaces(halfEdge, triangleIndices) {
   var faces = [];
   if (halfEdge.triangleStartIndex) {
-    for (var index of halfEdge.triangleStartIndex) {
-      faces.push(triangleIndices[index]);
+    // Indexed triangle mode
+    for (var i of halfEdge.triangleStartIndex) {
+      faces.push(triangleIndices[i]);
     }
   } else {
-    for (var index of halfEdge.originalIdx) {
-      var triangleStart = index - (index % 3);
+    for (var j of halfEdge.originalIdx) {
+      // Unindexed triangle mode
+      var triangleStart = j - (j % 3);
       faces.push(triangleStart);
     }
   }
@@ -306,8 +350,9 @@ function findEdgesToOutline(
   var outlineThese = [];
   var checked = new Set();
   var allEdges = Array.from(halfEdgeMap.values());
-  for (var i = 0; i < allEdges.length; i++) {
-    var edge = allEdges[i];
+  var maxIndex = 0;
+  for (var edgeIdx = 0; edgeIdx < allEdges.length; edgeIdx++) {
+    var edge = allEdges[edgeIdx];
     if (
       checked.has(generateMapKey(edge.sourceVertex, edge.destinationVertex)) ||
       checked.has(generateMapKey(edge.destinationVertex, edge.sourceVertex))
@@ -325,25 +370,23 @@ function findEdgesToOutline(
     if (neighbor.originalIdx.length > numIndicesToCheck) {
       neighbor.originalIdx = neighbor.originalIdx.slice(0, numIndicesToCheck);
     }
-    // FIXME
-    // there is something wrong with your face logic
-    // why do you need the first vertex of every face?
-    // why not just use the ones attached to the edge?
+
+    //  Get all the faces that share this edge
     var primaryEdgeFaces = getFirstVertexOfFaces(edge, triangleIndices);
-    var neighbourEdgeFaces = getFirstVertexOfFaces(neighbor, triangleIndices);
-    var highlight = false;
-    var highlightStartVertex;
-    var highlightEndVertex;
+    var neighborEdgeFaces = getFirstVertexOfFaces(neighbor, triangleIndices);
+    var outline = false;
+    var startVertex;
+    var endVertex;
     for (var i = 0; i < primaryEdgeFaces.length; i++) {
-      if (highlight) {
+      if (outline) {
         break;
       }
       var faceNormal = vertexNormalGetter(primaryEdgeFaces[i]);
-      for (var j = 0; j < neighbourEdgeFaces.length; j++) {
-        if (primaryEdgeFaces[i] === neighbourEdgeFaces[j]) {
+      for (var j = 0; j < neighborEdgeFaces.length; j++) {
+        if (primaryEdgeFaces[i] === neighborEdgeFaces[j]) {
           continue;
         }
-        var neighborNormal = vertexNormalGetter(neighbourEdgeFaces[j]);
+        var neighborNormal = vertexNormalGetter(neighborEdgeFaces[j]);
         if (!defined(faceNormal) || !defined(neighborNormal)) {
           continue;
         }
@@ -360,46 +403,32 @@ function findEdgesToOutline(
           );
           continue;
         }
-        if (angleBetween > minimumAngle && angleBetween < Math.PI - 0.01) {
-          highlight = true;
-          // TODO: make this work for unindexed triangles
-
-          // highlightStartVertex = edge.originalIdx[0];
-          // let allVerticesInTriangle = [
-          //   triangleIndices[edge.triangleStartIndex[i]],
-          //   triangleIndices[edge.triangleStartIndex[i] + 1],
-          //   triangleIndices[edge.triangleStartIndex[i] + 2],
-          // ];
-          // let orderInTriangle = allVerticesInTriangle.indexOf(
-          //   highlightStartVertex
-          // );
-          // let destOrderInTriangle = (orderInTriangle + 1) % 3;
-          // highlightEndVertex = allVerticesInTriangle[destOrderInTriangle];
-
-          highlightStartVertex = edge.originalIdx[0];
-          highlightEndVertex = edge.destinationIdx[0];
-          outlineThese.push(highlightStartVertex);
-          outlineThese.push(highlightEndVertex);
-          highlight = true;
+        if (angleBetween > minimumAngle && angleBetween < Math.PI) {
+          // Outline this edge
+          startVertex = edge.originalIdx[0];
+          endVertex = edge.destinationIdx[0];
+          outlineThese.push(startVertex);
+          outlineThese.push(endVertex);
+          maxIndex = Math.max(maxIndex, startVertex, endVertex);
+          outline = true;
           break;
-          //   highlightStartVertex = neighbor.originalIdx[0];
-          //   highlightEndVertex = neighbor.destinationIdx[0];
-          //   outlineThese.push(highlightStartVertex);
-          //   outlineThese.push(highlightEndVertex);
+          // We don't need to check any other faces that share this edge,
+          // we already know we need to outline it
         }
       }
     }
-    // if (highlight) {
-    //   outlineThese.push(highlightStartVertex);
-    //   outlineThese.push(highlightEndVertex);
-    // }
+
     checked.add(generateMapKey(edge.sourceVertex, edge.destinationVertex));
     checked.add(
       generateMapKey(neighbor.sourceVertex, neighbor.destinationVertex)
     );
   }
-  // TODO: check how big the indices are, and if they can fit into a Uint16, use one
-  return new Uint32Array(outlineThese);
+
+  if (maxIndex > MAX_GLTF_UINT16_INDEX) {
+    // The largest index won't fit in a Uint16, so use a Uint32
+    return new Uint32Array(outlineThese);
+  }
+  return new Uint16Array(outlineThese);
 }
 
 export default ModelOutlineGenerator;

@@ -1,7 +1,7 @@
 /**
  * Defines different modes for automatically generating outlines for models.
  *
- * USE_MODEL_SETTINGS will follow whatever is set in the glTF underlying the model.
+ * USE_GLTF_SETTINGS will follow whatever is set in the glTF underlying the model.
  * OFF forces outlines to not be generated, overriding what is specified in the model.
  * ON forces outlines to be generated, overriding what is specified in the model.
  *
