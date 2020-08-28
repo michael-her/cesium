@@ -9,7 +9,25 @@ import { DeveloperError } from "../Core/DeveloperError.js";
 var MAX_GLTF_UINT16_INDEX = 65534;
 function ModelOutlineGenerator() {}
 
+/**
+ * Determines which edges in a model should be outlined.
+ * It does this by adding the index buffer expected by CESIUM_primitive_outline
+ * extension that determines which edges to outline.
+ *
+ * Note that this is reasonably performance expensive, and not recommended for
+ * use on large meshes.
+ * @returns true if there are edges to outline, false otherwise.
+ * @private
+ */
 ModelOutlineGenerator.generateOutlinesForModel = function (model) {
+  if (
+    defined(model.extensionsRequired.KHR_draco_mesh_compression) ||
+    defined(model.extensionsUsed.KHR_draco_mesh_compression)
+  ) {
+    // Draco compressed meshes are not supported
+    return false;
+  }
+
   var gltf = model.gltf;
   var outlineAny = false;
   ForEach.mesh(gltf, function (mesh, meshId) {
@@ -217,6 +235,11 @@ function outlinePrimitive(model, meshId, primitiveId) {
   return true;
 }
 
+/**
+ * Generates a function for getting the attributes of a vertex with a particular
+ * index from a glTF vertex array
+ * @private
+ */
 function generateVertexAttributeGetter(vertexArray, elementsPerVertex) {
   return function (index) {
     return [
@@ -227,6 +250,14 @@ function generateVertexAttributeGetter(vertexArray, elementsPerVertex) {
   };
 }
 
+/**
+ * Adds a single triangle to the directed half edge map.
+ * @param {*} halfEdgeMap
+ * @param {*} firstVertexIndex
+ * @param {*} triangleStartIndex
+ * @param {*} triangleIndices
+ * @param {*} vertexPositionGetter
+ */
 function addTriangleToEdgeGraph(
   halfEdgeMap,
   firstVertexIndex,
@@ -341,6 +372,10 @@ function getFirstVertexOfFaces(halfEdge, triangleIndices) {
   return faces;
 }
 
+/**
+ * From a directed half edge map, determines which edges should be outlined.
+ * @private
+ */
 function findEdgesToOutline(
   halfEdgeMap,
   vertexNormalGetter,
