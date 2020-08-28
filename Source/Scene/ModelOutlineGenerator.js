@@ -3,6 +3,7 @@ import WebGLConstants from "../Core/WebGLConstants.js";
 import defined from "../Core/defined.js";
 import Cartesian3 from "../Core/Cartesian3.js";
 import { DeveloperError } from "../Core/DeveloperError.js";
+import ModelOutlineGenerationMode from "../Scene/ModelOutlineGenerationMode.js";
 
 // glTF does not allow an index value of 65535 because this is the primitive
 // restart value in some APIs.
@@ -165,7 +166,9 @@ function outlinePrimitive(model, meshId, primitiveId) {
     }
   }
 
-  var minimumAngle = Math.PI / 20;
+  var minimumAngle = defined(model.outlineGenerationMinimumAngle)
+    ? model.outlineGenerationMinimumAngle
+    : Math.PI / 20;
 
   if (
     defined(mesh.primitives[primitiveId].extensions) &&
@@ -173,7 +176,8 @@ function outlinePrimitive(model, meshId, primitiveId) {
     defined(
       mesh.primitives[primitiveId].extensions.CESIUM_primitive_outline
         .outlineWhenAngleBetweenFaceNormalsExceeds
-    )
+    ) &&
+    model.outlineGenerationMode === ModelOutlineGenerationMode.USE_GLTF_SETTINGS
   ) {
     minimumAngle =
       mesh.primitives[primitiveId].extensions.CESIUM_primitive_outline

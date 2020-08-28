@@ -210,6 +210,8 @@ var uriToGuid = {};
  * @param {Number} [options.colorBlendAmount=0.5] Value used to determine the color strength when the <code>colorBlendMode</code> is <code>MIX</code>. A value of 0.0 results in the model's rendered color while a value of 1.0 results in a solid color, with any value in-between resulting in a mix of the two.
  * @param {Color} [options.silhouetteColor=Color.RED] The silhouette color. If more than 256 models have silhouettes enabled, there is a small chance that overlapping models will have minor artifacts.
  * @param {Number} [options.silhouetteSize=0.0] The size of the silhouette in pixels.
+ * @param {ModelOutlineGenerationMode} [options.outlineGenerationMode] Determines whether outlines should be generated for this model.
+ * @param {Number} [options.outlineGenerationMinimumAngle] If generating outlines for this model, determines what the minimum angle between the normals of two faces has to be for the edge between them to receive an outline.
  * @param {ClippingPlaneCollection} [options.clippingPlanes] The {@link ClippingPlaneCollection} used to selectively disable rendering the model.
  * @param {Boolean} [options.dequantizeInShader=true] Determines if a {@link https://github.com/google/draco|Draco} encoded model is dequantized on the GPU. This decreases total memory usage for encoded models.
  * @param {Cartesian2} [options.imageBasedLightingFactor=Cartesian2(1.0, 1.0)] Scales diffuse and specular image-based lighting from the earth, sky, atmosphere and star skybox.
@@ -327,7 +329,31 @@ function Model(options) {
    *
    * @see ModelOutlineGenerator
    */
-  this.outlineGenerationMode = defaultValue(options.outlineGenerationMode, ModelOutlineGenerationMode.USE_GLTF_SETTINGS);
+  this.outlineGenerationMode = defaultValue(
+    options.outlineGenerationMode,
+    ModelOutlineGenerationMode.USE_GLTF_SETTINGS
+  );
+
+  /**
+   * If generating outlines for this model, determines what the minimum angle
+   * between the normals of two faces has to be for the edge between them to
+   * receive an outline.
+   *
+   * This follows @see Model.outlineGenerationMode — if outlineGenerationMode is
+   * OFF or USE_GLTF_SETTINGS, this value will be ignored. If undefined, it will
+   * use the value from the glTF if it exists, or otherwise the default value
+   * specified by ModelOutlineGenerator.
+   *
+   * @type {number}
+   *
+   * @default undefined
+   *
+   * @see ModelOutlineGenerator
+   */
+  this.outlineGenerationMinimumAngle = defaultValue(
+    options.outlineGenerationMinimumAngle,
+    undefined
+  );
 
   /**
    * The 4x4 transformation matrix that transforms the model from model to world coordinates.
