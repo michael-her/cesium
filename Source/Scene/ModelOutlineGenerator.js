@@ -407,6 +407,10 @@ function findEdgesToOutline(
     if (!defined(neighbor)) {
       continue;
     }
+    // For performance reasons we want to cap the number of vertices we check
+    // for each edge. Some meshes can have a lot of duplicate vertices in the 
+    // same spot, so we don't want to outline those many, many times.
+    // This number is arbitrary.
     var numIndicesToCheck = 21;
     if (edge.originalIdx.length > numIndicesToCheck) {
       edge.originalIdx = edge.originalIdx.slice(0, numIndicesToCheck);
