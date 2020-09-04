@@ -140,7 +140,7 @@ function outlinePrimitive(model, meshId, primitiveId) {
   var halfEdgeMap = new Map();
   var vertexPositionGetter = generateVertexAttributeGetter(
     positions,
-    positionBufferViewGltf.byteStride / 4
+    positionBufferViewGltf.byteStride / Float32Array.BYTES_PER_ELEMENT
   );
 
   // Populate our half edge map
@@ -265,7 +265,9 @@ function generateVertexAttributeGetter(vertexArray, elementsPerVertex) {
 function addTriangleToEdgeGraph(
   halfEdgeMap,
   firstVertexIndex,
-  triangleStartIndex, // in indexedTriangle mode, this is an index into the index buffer. otherwise it's an index to the vertex positions
+  triangleStartIndex, // in indexedTriangle mode, this is an index into the
+  // index buffer. otherwise it's an index to the vertex
+  // positions
   triangleIndices,
   vertexPositionGetter
 ) {
@@ -285,7 +287,10 @@ function addTriangleToEdgeGraph(
     );
   }
 
-  // Each half edge in the triangle (one in each direction)
+  // For topologically "well behaved" meshes, adding half edges in both
+  // directions isn't necessary-- every half-edge's twin exists in another face.
+  // But in non-2-manifold meshes (where more than 2 faces share an edge), or
+  // meshes with unconnected faces, this assumption doesn't hold.
   var edgePairs = [
     [vertexIndexA, vertexIndexB],
     [vertexIndexB, vertexIndexC],

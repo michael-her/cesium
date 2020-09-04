@@ -48,6 +48,10 @@ ModelOutlineLoader.shouldGenerateOutlines = function (model) {
   var outlineGenerationRequestedInGltf = false;
   if (ModelOutlineLoader.hasExtension(model)) {
     ForEach.mesh(model.gltf, function (mesh, _meshId) {
+      if (outlineGenerationRequestedInGltf) {
+        return true; // break
+      }
+
       ForEach.meshPrimitive(mesh, function (primitive, _primitiveId) {
         if (
           defined(primitive.extensions) &&
@@ -58,6 +62,7 @@ ModelOutlineLoader.shouldGenerateOutlines = function (model) {
           )
         ) {
           outlineGenerationRequestedInGltf = true;
+          return true; //  break
         }
       });
     });
