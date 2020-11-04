@@ -2,7 +2,6 @@ import ForEach from "../ThirdParty/GltfPipeline/ForEach.js";
 import WebGLConstants from "../Core/WebGLConstants.js";
 import defined from "../Core/defined.js";
 import Cartesian3 from "../Core/Cartesian3.js";
-import { DeveloperError } from "../Core/DeveloperError.js";
 import ModelOutlineGenerationMode from "../Scene/ModelOutlineGenerationMode.js";
 
 // glTF does not allow an index value of 65535 because this is the primitive
@@ -282,9 +281,9 @@ function addTriangleToEdgeGraph(
     vertexIndexB = firstVertexIndex + 1;
     vertexIndexC = firstVertexIndex + 2;
   } else {
-    throw new DeveloperError(
-      "Either firstVertexIndex, or triangleStartIndex and triangleIndices, must be provided."
-    );
+    // throw new DeveloperError(
+    //   "Either firstVertexIndex, or triangleStartIndex and triangleIndices, must be provided."
+    // );
   }
 
   // For topologically "well behaved" meshes, adding half edges in both
@@ -408,7 +407,7 @@ function findEdgesToOutline(
       continue;
     }
     // For performance reasons we want to cap the number of vertices we check
-    // for each edge. Some meshes can have a lot of duplicate vertices in the 
+    // for each edge. Some meshes can have a lot of duplicate vertices in the
     // same spot, so we don't want to outline those many, many times.
     // This number is arbitrary.
     var numIndicesToCheck = 21;
