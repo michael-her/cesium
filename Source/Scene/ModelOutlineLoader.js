@@ -262,7 +262,7 @@ function addOutline(
       numVertices <= MAX_GLTF_UINT16_INDEX
         ? new Uint16Array(numVertices)
         : new Uint32Array(numVertices);
-    for (let i = 0; i < triangleIndices.length; ++i) {
+    for (var i = 0; i < triangleIndices.length; ++i) {
       triangleIndices[i] = i;
     }
 
