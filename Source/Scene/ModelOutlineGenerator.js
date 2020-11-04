@@ -367,11 +367,11 @@ function getFirstVertexOfFaces(halfEdge, triangleIndices) {
   var faces = [];
   if (halfEdge.triangleStartIndex) {
     // Indexed triangle mode
-    for (var i of halfEdge.triangleStartIndex) {
+    for (var i = 0; i < halfEdge.triangleStartIndex.length; i++) {
       faces.push(triangleIndices[i]);
     }
   } else {
-    for (var j of halfEdge.originalIdx) {
+    for (var j = 0; j < halfEdge.originalIdx.length; j++) {
       // Unindexed triangle mode
       var triangleStart = j - (j % 3);
       faces.push(triangleStart);
