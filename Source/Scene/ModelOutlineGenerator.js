@@ -260,6 +260,7 @@ function generateVertexAttributeGetter(vertexArray, elementsPerVertex) {
  * @param {*} triangleStartIndex
  * @param {*} triangleIndices
  * @param {*} vertexPositionGetter
+ * @private
  */
 function addTriangleToEdgeGraph(
   halfEdgeMap,
