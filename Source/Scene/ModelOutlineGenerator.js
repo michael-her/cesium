@@ -81,14 +81,14 @@ function outlinePrimitive(model, meshId, primitiveId) {
   var positions = new Float32Array(
     positionBufferView.buffer,
     positionBufferView.byteOffset + positionAccessorGltf.byteOffset,
-    positionAccessorGltf.count * 3 //x, y, z
+    positionBufferViewGltf.length
   );
 
   var normalBufferView = loadResources.getBuffer(normalBufferViewGltf);
   var normals = new Float32Array(
     normalBufferView.buffer,
     normalBufferView.byteOffset + normalAccessorGltf.byteOffset,
-    normalAccessorGltf.count * 3 //x, y, z
+    normalBufferViewGltf.length
   );
   var vertexNormalGetter = generateVertexAttributeGetter(
     normals,
@@ -245,6 +245,9 @@ function outlinePrimitive(model, meshId, primitiveId) {
  */
 function generateVertexAttributeGetter(vertexArray, elementsPerVertex) {
   return function (index) {
+    if (elementsPerVertex * index > vertexArray.length) {
+      console.log("whoops");
+    }
     return [
       vertexArray[elementsPerVertex * index],
       vertexArray[elementsPerVertex * index + 1],
@@ -266,8 +269,7 @@ function addTriangleToEdgeGraph(
   halfEdgeMap,
   firstVertexIndex,
   triangleStartIndex, // in indexedTriangle mode, this is an index into the
-  // index buffer. otherwise it's an index to the vertex
-  // positions
+  // index buffer.
   triangleIndices,
   vertexPositionGetter
 ) {
@@ -307,7 +309,7 @@ function addTriangleToEdgeGraph(
       vertexPositionGetter,
       pair[0],
       pair[1],
-      triangleStartIndex
+      defined(triangleIndices) ? triangleIndices[triangleStartIndex] : undefined
     );
   }
 }
@@ -317,7 +319,7 @@ function addHalfEdge(
   vertexPositionGetter,
   sourceVertexIdx,
   destinationVertexIdx,
-  triangleIndex
+  triangleStartIndex
 ) {
   var halfEdge = {
     sourceVertex: vertexPositionGetter(sourceVertexIdx),
@@ -325,8 +327,8 @@ function addHalfEdge(
     originalIdx: [sourceVertexIdx],
     destinationIdx: [destinationVertexIdx],
   };
-  if (defined(triangleIndex)) {
-    halfEdge.triangleStartIndex = [triangleIndex];
+  if (defined(triangleStartIndex)) {
+    halfEdge.triangleStartIndex = [triangleStartIndex];
   }
   var mapIdx = generateMapKey(
     halfEdge.sourceVertex,
@@ -336,8 +338,8 @@ function addHalfEdge(
   if (halfEdgeFromMap) {
     halfEdgeFromMap.originalIdx.push(sourceVertexIdx);
     halfEdgeFromMap.destinationIdx.push(destinationVertexIdx);
-    if (defined(triangleIndex)) {
-      halfEdgeFromMap.triangleStartIndex.push(triangleIndex);
+    if (defined(triangleStartIndex)) {
+      halfEdgeFromMap.triangleStartIndex.push(triangleStartIndex);
     }
   } else {
     halfEdgeMap.set(mapIdx, halfEdge);
@@ -368,13 +370,12 @@ function getFirstVertexOfFaces(halfEdge, triangleIndices) {
   var faces = [];
   if (halfEdge.triangleStartIndex) {
     // Indexed triangle mode
-    for (var i = 0; i < halfEdge.triangleStartIndex.length; i++) {
-      faces.push(triangleIndices[i]);
-    }
+    faces.push(...halfEdge.triangleStartIndex);
   } else {
     for (var j = 0; j < halfEdge.originalIdx.length; j++) {
       // Unindexed triangle mode
-      var triangleStart = j - (j % 3);
+      var triangleStart =
+        halfEdge.originalIdx[j] - (halfEdge.originalIdx[j] % 3);
       faces.push(triangleStart);
     }
   }

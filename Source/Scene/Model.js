@@ -210,8 +210,6 @@ var uriToGuid = {};
  * @param {Number} [options.colorBlendAmount=0.5] Value used to determine the color strength when the <code>colorBlendMode</code> is <code>MIX</code>. A value of 0.0 results in the model's rendered color while a value of 1.0 results in a solid color, with any value in-between resulting in a mix of the two.
  * @param {Color} [options.silhouetteColor=Color.RED] The silhouette color. If more than 256 models have silhouettes enabled, there is a small chance that overlapping models will have minor artifacts.
  * @param {Number} [options.silhouetteSize=0.0] The size of the silhouette in pixels.
- * @param {ModelOutlineGenerationMode} [options.outlineGenerationMode] Determines whether outlines should be generated for this model.
- * @param {Number} [options.outlineGenerationMinimumAngle] If generating outlines for this model, determines what the minimum angle between the normals of two faces has to be for the edge between them to receive an outline.
  * @param {ClippingPlaneCollection} [options.clippingPlanes] The {@link ClippingPlaneCollection} used to selectively disable rendering the model.
  * @param {Boolean} [options.dequantizeInShader=true] Determines if a {@link https://github.com/google/draco|Draco} encoded model is dequantized on the GPU. This decreases total memory usage for encoded models.
  * @param {Cartesian2} [options.imageBasedLightingFactor=Cartesian2(1.0, 1.0)] Scales diffuse and specular image-based lighting from the earth, sky, atmosphere and star skybox.
@@ -1423,6 +1421,8 @@ function containsGltfMagic(uint8Array) {
  * @param {Boolean} [options.dequantizeInShader=true] Determines if a {@link https://github.com/google/draco|Draco} encoded model is dequantized on the GPU. This decreases total memory usage for encoded models.
  * @param {Credit|String} [options.credit] A credit for the model, which is displayed on the canvas.
  * @param {Boolean} [options.backFaceCulling=true] Whether to cull back-facing geometry. When true, back face culling is determined by the material's doubleSided property; when false, back face culling is disabled. Back faces are not culled if {@link Model#color} is translucent or {@link Model#silhouetteSize} is greater than 0.0.
+ * @param {ModelOutlineGenerationMode} [options.outlineGenerationMode] Determines whether outlines should be generated for this model.
+ * @param {Number} [options.outlineGenerationMinimumAngle] If generating outlines for this model, determines what the minimum angle between the normals of two faces has to be for the edge between them to receive an outline.
  *
  * @returns {Model} The newly created model.
  *
