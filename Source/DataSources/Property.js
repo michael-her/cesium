@@ -104,16 +104,16 @@ Property.isConstant = function (property) {
 /**
  * @private
  */
-Property.getValueOrUndefined = function (property, time, result) {
-  return defined(property) ? property.getValue(time, result) : undefined;
+Property.getValueOrUndefined = function (property, time, result, entity) {
+  return defined(property) ? property.getValue(time, result, entity) : undefined;
 };
 
 /**
  * @private
  */
-Property.getValueOrDefault = function (property, time, valueDefault, result) {
+Property.getValueOrDefault = function (property, time, valueDefault, result, entity) {
   return defined(property)
-    ? defaultValue(property.getValue(time, result), valueDefault)
+    ? defaultValue(property.getValue(time, result, entity), valueDefault)
     : valueDefault;
 };
 
@@ -124,11 +124,12 @@ Property.getValueOrClonedDefault = function (
   property,
   time,
   valueDefault,
-  result
+  result,
+  entity
 ) {
   var value;
   if (defined(property)) {
-    value = property.getValue(time, result);
+    value = property.getValue(time, result, entity);
   }
   if (!defined(value)) {
     value = valueDefault.clone(value);

@@ -53,8 +53,8 @@ Object.defineProperties(CallbackProperty.prototype, {
  * @param {Object} [result] The object to store the value into, if omitted, a new instance is created and returned.
  * @returns {Object} The modified result parameter or a new instance if the result parameter was not supplied or is unsupported.
  */
-CallbackProperty.prototype.getValue = function (time, result) {
-  return this._callback(time, result);
+CallbackProperty.prototype.getValue = function (time, result, entity) {
+  return this._callback(time, result, entity);
 };
 
 /**

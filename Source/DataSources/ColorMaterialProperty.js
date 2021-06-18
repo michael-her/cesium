@@ -76,7 +76,7 @@ ColorMaterialProperty.prototype.getType = function (time) {
  * @param {Object} [result] The object to store the value into, if omitted, a new instance is created and returned.
  * @returns {Object} The modified result parameter or a new instance if the result parameter was not supplied.
  */
-ColorMaterialProperty.prototype.getValue = function (time, result) {
+ColorMaterialProperty.prototype.getValue = function (time, result, entity) {
   if (!defined(result)) {
     result = {};
   }
@@ -84,7 +84,8 @@ ColorMaterialProperty.prototype.getValue = function (time, result) {
     this._color,
     time,
     Color.WHITE,
-    result.color
+    result.color,
+    entity,
   );
   return result;
 };
