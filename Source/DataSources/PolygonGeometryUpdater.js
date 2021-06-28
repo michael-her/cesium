@@ -140,7 +140,7 @@ PolygonGeometryUpdater.prototype.createFillGeometryInstance = function (time) {
         time,
         defaultOffset,
         offsetScratch,
-        entity,
+        entity
       )
     );
   }
@@ -188,12 +188,12 @@ PolygonGeometryUpdater.prototype.createOutlineGeometryInstance = function (
     time,
     Color.BLACK,
     scratchColor,
-    entity,
+    entity
   );
   var distanceDisplayCondition = this._distanceDisplayConditionProperty.getValue(
     time,
     null,
-    entity,
+    entity
   );
 
   var attributes = {
@@ -217,7 +217,7 @@ PolygonGeometryUpdater.prototype.createOutlineGeometryInstance = function (
         time,
         defaultOffset,
         offsetScratch,
-        entity,
+        entity
       )
     );
   }
@@ -240,7 +240,7 @@ PolygonGeometryUpdater.prototype._computeCenter = function (time, result) {
     this._entity.polygon.hierarchy,
     time,
     null,
-    this._entity,
+    this._entity
   );
   if (!defined(hierarchy)) {
     return;
@@ -335,34 +335,34 @@ PolygonGeometryUpdater.prototype._setStaticOptions = function (
     polygon.height,
     Iso8601.MINIMUM_VALUE,
     null,
-    entity,
+    entity
   );
   var heightReferenceValue = Property.getValueOrDefault(
     polygon.heightReference,
     Iso8601.MINIMUM_VALUE,
     HeightReference.NONE,
     null,
-    entity,
+    entity
   );
   var extrudedHeightValue = Property.getValueOrUndefined(
     polygon.extrudedHeight,
     Iso8601.MINIMUM_VALUE,
     null,
-    entity,
+    entity
   );
   var extrudedHeightReferenceValue = Property.getValueOrDefault(
     polygon.extrudedHeightReference,
     Iso8601.MINIMUM_VALUE,
     HeightReference.NONE,
     null,
-    entity,
+    entity
   );
   var perPositionHeightValue = Property.getValueOrDefault(
     polygon.perPositionHeight,
     Iso8601.MINIMUM_VALUE,
     false,
     null,
-    entity,
+    entity
   );
 
   heightValue = GroundGeometryUpdater.getGeometryHeight(
@@ -400,13 +400,13 @@ PolygonGeometryUpdater.prototype._setStaticOptions = function (
     polygon.granularity,
     Iso8601.MINIMUM_VALUE,
     null,
-    entity,
+    entity
   );
   options.stRotation = Property.getValueOrUndefined(
     polygon.stRotation,
     Iso8601.MINIMUM_VALUE,
     null,
-    entity,
+    entity
   );
   options.perPositionHeight = perPositionHeightValue;
   options.closeTop = Property.getValueOrDefault(
@@ -414,14 +414,14 @@ PolygonGeometryUpdater.prototype._setStaticOptions = function (
     Iso8601.MINIMUM_VALUE,
     true,
     null,
-    entity,
+    entity
   );
   options.closeBottom = Property.getValueOrDefault(
     polygon.closeBottom,
     Iso8601.MINIMUM_VALUE,
     true,
     null,
-    entity,
+    entity
   );
   options.offsetAttribute = offsetAttribute;
   options.height = heightValue;
@@ -430,7 +430,7 @@ PolygonGeometryUpdater.prototype._setStaticOptions = function (
     Iso8601.MINIMUM_VALUE,
     ArcType.GEODESIC,
     null,
-    entity,
+    entity
   );
 
   extrudedHeightValue = GroundGeometryUpdater.getGeometryExtrudedHeight(
@@ -504,7 +504,7 @@ DyanmicPolygonGeometryUpdater.prototype._setOptions = function (
     polygon.hierarchy,
     time,
     null,
-    entity,
+    entity
   );
 
   var heightValue = Property.getValueOrUndefined(polygon.height, time, null, entity);
@@ -513,26 +513,26 @@ DyanmicPolygonGeometryUpdater.prototype._setOptions = function (
     time,
     HeightReference.NONE,
     null,
-    entity,
+    entity
   );
   var extrudedHeightReferenceValue = Property.getValueOrDefault(
     polygon.extrudedHeightReference,
     time,
     HeightReference.NONE,
     null,
-    entity,
+    entity
   );
   var extrudedHeightValue = Property.getValueOrUndefined(
     polygon.extrudedHeight,
     time,
     null,
-    entity,
+    entity
   );
   var perPositionHeightValue = Property.getValueOrUndefined(
     polygon.perPositionHeight,
     time,
     null,
-    entity,
+    entity
   );
 
   heightValue = GroundGeometryUpdater.getGeometryHeight(
@@ -572,7 +572,7 @@ DyanmicPolygonGeometryUpdater.prototype._setOptions = function (
     polygon.perPositionHeight,
     time,
     null,
-    entity,
+    entity
   );
   options.closeTop = Property.getValueOrDefault(polygon.closeTop, time, true, null, entity);
   options.closeBottom = Property.getValueOrDefault(
@@ -580,7 +580,7 @@ DyanmicPolygonGeometryUpdater.prototype._setOptions = function (
     time,
     true,
     null,
-    entity,
+    entity
   );
   options.offsetAttribute = offsetAttribute;
   options.height = heightValue;
@@ -589,7 +589,7 @@ DyanmicPolygonGeometryUpdater.prototype._setOptions = function (
     time,
     ArcType.GEODESIC,
     null,
-    entity,
+    entity
   );
 
   extrudedHeightValue = GroundGeometryUpdater.getGeometryExtrudedHeight(

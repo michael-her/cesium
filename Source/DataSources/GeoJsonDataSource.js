@@ -996,9 +996,8 @@ GeoJsonDataSource.prototype.load = function (data, options) {
 function getColor(color) {
   if (typeof color === "string" || color instanceof String) {
     return Color.fromCssColorString(color);
-  } else {
-    return color;
   }
+  return color;
 }
 
 /**

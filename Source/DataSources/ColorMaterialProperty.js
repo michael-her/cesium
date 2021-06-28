@@ -85,7 +85,7 @@ ColorMaterialProperty.prototype.getValue = function (time, result, entity) {
     time,
     Color.WHITE,
     result.color,
-    entity,
+    entity
   );
   return result;
 };

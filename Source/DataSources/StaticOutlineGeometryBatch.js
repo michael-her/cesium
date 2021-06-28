@@ -159,7 +159,7 @@ Batch.prototype.update = function (time) {
           time,
           Color.WHITE,
           colorScratch,
-          updater.entity,
+          updater.entity
         );
         if (!Color.equals(attributes._lastColor, outlineColor)) {
           attributes._lastColor = Color.clone(
@@ -198,7 +198,7 @@ Batch.prototype.update = function (time) {
           time,
           defaultDistanceDisplayCondition,
           distanceDisplayConditionScratch,
-          updater.entity,
+          updater.entity
         );
         if (
           !DistanceDisplayCondition.equals(
@@ -224,7 +224,7 @@ Batch.prototype.update = function (time) {
           time,
           defaultOffset,
           offsetScratch,
-          updater.entity,
+          updater.entity
         );
         if (!Cartesian3.equals(offset, attributes._lastOffset)) {
           attributes._lastOffset = Cartesian3.clone(
