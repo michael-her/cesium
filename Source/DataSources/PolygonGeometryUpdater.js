@@ -110,11 +110,11 @@ PolygonGeometryUpdater.prototype.createFillGeometryInstance = function (time) {
     show: new ShowGeometryInstanceAttribute(
       isAvailable &&
         entity.isShowing &&
-        this._showProperty.getValue(time) &&
-        this._fillProperty.getValue(time)
+        this._showProperty.getValue(time, null, entity) &&
+        this._fillProperty.getValue(time, null, entity)
     ),
     distanceDisplayCondition: DistanceDisplayConditionGeometryInstanceAttribute.fromDistanceDisplayCondition(
-      this._distanceDisplayConditionProperty.getValue(time)
+      this._distanceDisplayConditionProperty.getValue(time, null, entity)
     ),
     offset: undefined,
     color: undefined,
@@ -126,7 +126,7 @@ PolygonGeometryUpdater.prototype.createFillGeometryInstance = function (time) {
       defined(this._materialProperty.color) &&
       (this._materialProperty.color.isConstant || isAvailable)
     ) {
-      currentColor = this._materialProperty.color.getValue(time, scratchColor);
+      currentColor = this._materialProperty.color.getValue(time, scratchColor, entity);
     }
     if (!defined(currentColor)) {
       currentColor = Color.WHITE;
@@ -139,7 +139,8 @@ PolygonGeometryUpdater.prototype.createFillGeometryInstance = function (time) {
         this._terrainOffsetProperty,
         time,
         defaultOffset,
-        offsetScratch
+        offsetScratch,
+        entity,
       )
     );
   }
@@ -186,18 +187,21 @@ PolygonGeometryUpdater.prototype.createOutlineGeometryInstance = function (
     this._outlineColorProperty,
     time,
     Color.BLACK,
-    scratchColor
+    scratchColor,
+    entity,
   );
   var distanceDisplayCondition = this._distanceDisplayConditionProperty.getValue(
-    time
+    time,
+    null,
+    entity,
   );
 
   var attributes = {
     show: new ShowGeometryInstanceAttribute(
       isAvailable &&
         entity.isShowing &&
-        this._showProperty.getValue(time) &&
-        this._showOutlineProperty.getValue(time)
+        this._showProperty.getValue(time, null, entity) &&
+        this._showOutlineProperty.getValue(time, null, entity)
     ),
     color: ColorGeometryInstanceAttribute.fromColor(outlineColor),
     distanceDisplayCondition: DistanceDisplayConditionGeometryInstanceAttribute.fromDistanceDisplayCondition(
@@ -212,7 +216,8 @@ PolygonGeometryUpdater.prototype.createOutlineGeometryInstance = function (
         this._terrainOffsetProperty,
         time,
         defaultOffset,
-        offsetScratch
+        offsetScratch,
+        entity,
       )
     );
   }
@@ -233,7 +238,9 @@ PolygonGeometryUpdater.prototype.createOutlineGeometryInstance = function (
 PolygonGeometryUpdater.prototype._computeCenter = function (time, result) {
   var hierarchy = Property.getValueOrUndefined(
     this._entity.polygon.hierarchy,
-    time
+    time,
+    null,
+    this._entity,
   );
   if (!defined(hierarchy)) {
     return;
@@ -288,7 +295,7 @@ PolygonGeometryUpdater.prototype._isOnTerrain = function (entity, polygon) {
   var perPositionHeightEnabled =
     defined(perPositionHeightProperty) &&
     (perPositionHeightProperty.isConstant
-      ? perPositionHeightProperty.getValue(Iso8601.MINIMUM_VALUE)
+      ? perPositionHeightProperty.getValue(Iso8601.MINIMUM_VALUE, null, entity)
       : true);
   return onTerrain && !perPositionHeightEnabled;
 };
@@ -323,29 +330,39 @@ PolygonGeometryUpdater.prototype._setStaticOptions = function (
     ? PerInstanceColorAppearance.VERTEX_FORMAT
     : MaterialAppearance.MaterialSupport.TEXTURED.vertexFormat;
 
-  var hierarchyValue = polygon.hierarchy.getValue(Iso8601.MINIMUM_VALUE);
+  var hierarchyValue = polygon.hierarchy.getValue(Iso8601.MINIMUM_VALUE, null, entity);
   var heightValue = Property.getValueOrUndefined(
     polygon.height,
-    Iso8601.MINIMUM_VALUE
+    Iso8601.MINIMUM_VALUE,
+    null,
+    entity,
   );
   var heightReferenceValue = Property.getValueOrDefault(
     polygon.heightReference,
     Iso8601.MINIMUM_VALUE,
-    HeightReference.NONE
+    HeightReference.NONE,
+    null,
+    entity,
   );
   var extrudedHeightValue = Property.getValueOrUndefined(
     polygon.extrudedHeight,
-    Iso8601.MINIMUM_VALUE
+    Iso8601.MINIMUM_VALUE,
+    null,
+    entity,
   );
   var extrudedHeightReferenceValue = Property.getValueOrDefault(
     polygon.extrudedHeightReference,
     Iso8601.MINIMUM_VALUE,
-    HeightReference.NONE
+    HeightReference.NONE,
+    null,
+    entity,
   );
   var perPositionHeightValue = Property.getValueOrDefault(
     polygon.perPositionHeight,
     Iso8601.MINIMUM_VALUE,
-    false
+    false,
+    null,
+    entity,
   );
 
   heightValue = GroundGeometryUpdater.getGeometryHeight(
@@ -381,29 +398,39 @@ PolygonGeometryUpdater.prototype._setStaticOptions = function (
   options.polygonHierarchy = hierarchyValue;
   options.granularity = Property.getValueOrUndefined(
     polygon.granularity,
-    Iso8601.MINIMUM_VALUE
+    Iso8601.MINIMUM_VALUE,
+    null,
+    entity,
   );
   options.stRotation = Property.getValueOrUndefined(
     polygon.stRotation,
-    Iso8601.MINIMUM_VALUE
+    Iso8601.MINIMUM_VALUE,
+    null,
+    entity,
   );
   options.perPositionHeight = perPositionHeightValue;
   options.closeTop = Property.getValueOrDefault(
     polygon.closeTop,
     Iso8601.MINIMUM_VALUE,
-    true
+    true,
+    null,
+    entity,
   );
   options.closeBottom = Property.getValueOrDefault(
     polygon.closeBottom,
     Iso8601.MINIMUM_VALUE,
-    true
+    true,
+    null,
+    entity,
   );
   options.offsetAttribute = offsetAttribute;
   options.height = heightValue;
   options.arcType = Property.getValueOrDefault(
     polygon.arcType,
     Iso8601.MINIMUM_VALUE,
-    ArcType.GEODESIC
+    ArcType.GEODESIC,
+    null,
+    entity,
   );
 
   extrudedHeightValue = GroundGeometryUpdater.getGeometryExtrudedHeight(
@@ -475,27 +502,37 @@ DyanmicPolygonGeometryUpdater.prototype._setOptions = function (
 
   options.polygonHierarchy = Property.getValueOrUndefined(
     polygon.hierarchy,
-    time
+    time,
+    null,
+    entity,
   );
 
-  var heightValue = Property.getValueOrUndefined(polygon.height, time);
+  var heightValue = Property.getValueOrUndefined(polygon.height, time, null, entity);
   var heightReferenceValue = Property.getValueOrDefault(
     polygon.heightReference,
     time,
-    HeightReference.NONE
+    HeightReference.NONE,
+    null,
+    entity,
   );
   var extrudedHeightReferenceValue = Property.getValueOrDefault(
     polygon.extrudedHeightReference,
     time,
-    HeightReference.NONE
+    HeightReference.NONE,
+    null,
+    entity,
   );
   var extrudedHeightValue = Property.getValueOrUndefined(
     polygon.extrudedHeight,
-    time
+    time,
+    null,
+    entity,
   );
   var perPositionHeightValue = Property.getValueOrUndefined(
     polygon.perPositionHeight,
-    time
+    time,
+    null,
+    entity,
   );
 
   heightValue = GroundGeometryUpdater.getGeometryHeight(
@@ -529,24 +566,30 @@ DyanmicPolygonGeometryUpdater.prototype._setOptions = function (
     );
   }
 
-  options.granularity = Property.getValueOrUndefined(polygon.granularity, time);
-  options.stRotation = Property.getValueOrUndefined(polygon.stRotation, time);
+  options.granularity = Property.getValueOrUndefined(polygon.granularity, time, null, entity);
+  options.stRotation = Property.getValueOrUndefined(polygon.stRotation, time, null, entity);
   options.perPositionHeight = Property.getValueOrUndefined(
     polygon.perPositionHeight,
-    time
+    time,
+    null,
+    entity,
   );
-  options.closeTop = Property.getValueOrDefault(polygon.closeTop, time, true);
+  options.closeTop = Property.getValueOrDefault(polygon.closeTop, time, true, null, entity);
   options.closeBottom = Property.getValueOrDefault(
     polygon.closeBottom,
     time,
-    true
+    true,
+    null,
+    entity,
   );
   options.offsetAttribute = offsetAttribute;
   options.height = heightValue;
   options.arcType = Property.getValueOrDefault(
     polygon.arcType,
     time,
-    ArcType.GEODESIC
+    ArcType.GEODESIC,
+    null,
+    entity,
   );
 
   extrudedHeightValue = GroundGeometryUpdater.getGeometryExtrudedHeight(
