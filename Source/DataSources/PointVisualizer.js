@@ -88,7 +88,9 @@ PointVisualizer.prototype.update = function (time) {
     var heightReference = Property.getValueOrDefault(
       pointGraphics._heightReference,
       time,
-      HeightReference.NONE
+      HeightReference.NONE,
+      null,
+      entity
     );
     var show =
       entity.isShowing &&
@@ -99,7 +101,9 @@ PointVisualizer.prototype.update = function (time) {
       position = Property.getValueOrUndefined(
         entity._position,
         time,
-        positionScratch
+        positionScratch,
+        null,
+        entity
       );
       show = defined(position);
     }
@@ -153,44 +157,58 @@ PointVisualizer.prototype.update = function (time) {
       pointPrimitive.scaleByDistance = Property.getValueOrUndefined(
         pointGraphics._scaleByDistance,
         time,
-        scaleByDistanceScratch
+        scaleByDistanceScratch,
+        null,
+        entity
       );
       pointPrimitive.translucencyByDistance = Property.getValueOrUndefined(
         pointGraphics._translucencyByDistance,
         time,
-        translucencyByDistanceScratch
+        translucencyByDistanceScratch,
+        null,
+        entity
       );
       pointPrimitive.color = Property.getValueOrDefault(
         pointGraphics._color,
         time,
         defaultColor,
-        colorScratch
+        colorScratch,
+        entity
       );
       pointPrimitive.outlineColor = Property.getValueOrDefault(
         pointGraphics._outlineColor,
         time,
         defaultOutlineColor,
-        outlineColorScratch
+        outlineColorScratch,
+        entity
       );
       pointPrimitive.outlineWidth = Property.getValueOrDefault(
         pointGraphics._outlineWidth,
         time,
-        defaultOutlineWidth
+        defaultOutlineWidth,
+        null,
+        entity
       );
       pointPrimitive.pixelSize = Property.getValueOrDefault(
         pointGraphics._pixelSize,
         time,
-        defaultPixelSize
+        defaultPixelSize,
+        null,
+        entity
       );
       pointPrimitive.distanceDisplayCondition = Property.getValueOrUndefined(
         pointGraphics._distanceDisplayCondition,
         time,
-        distanceDisplayConditionScratch
+        distanceDisplayConditionScratch,
+        null,
+        entity
       );
       pointPrimitive.disableDepthTestDistance = Property.getValueOrDefault(
         pointGraphics._disableDepthTestDistance,
         time,
-        defaultDisableDepthTestDistance
+        defaultDisableDepthTestDistance,
+        null,
+        entity
       );
     } else if (defined(billboard)) {
       billboard.show = true;
@@ -198,22 +216,30 @@ PointVisualizer.prototype.update = function (time) {
       billboard.scaleByDistance = Property.getValueOrUndefined(
         pointGraphics._scaleByDistance,
         time,
-        scaleByDistanceScratch
+        scaleByDistanceScratch,
+        null,
+        entity
       );
       billboard.translucencyByDistance = Property.getValueOrUndefined(
         pointGraphics._translucencyByDistance,
         time,
-        translucencyByDistanceScratch
+        translucencyByDistanceScratch,
+        null,
+        entity
       );
       billboard.distanceDisplayCondition = Property.getValueOrUndefined(
         pointGraphics._distanceDisplayCondition,
         time,
-        distanceDisplayConditionScratch
+        distanceDisplayConditionScratch,
+        null,
+        entity
       );
       billboard.disableDepthTestDistance = Property.getValueOrDefault(
         pointGraphics._disableDepthTestDistance,
         time,
-        defaultDisableDepthTestDistance
+        defaultDisableDepthTestDistance,
+        null,
+        entity
       );
       billboard.heightReference = heightReference;
 
@@ -221,19 +247,22 @@ PointVisualizer.prototype.update = function (time) {
         pointGraphics._color,
         time,
         defaultColor,
-        colorScratch
+        colorScratch,
+        entity
       );
       var newOutlineColor = Property.getValueOrDefault(
         pointGraphics._outlineColor,
         time,
         defaultOutlineColor,
-        outlineColorScratch
+        outlineColorScratch,
+        entity
       );
       var newOutlineWidth = Math.round(
         Property.getValueOrDefault(
           pointGraphics._outlineWidth,
           time,
-          defaultOutlineWidth
+          defaultOutlineWidth,
+          entity
         )
       );
       var newPixelSize = Math.max(
@@ -242,7 +271,8 @@ PointVisualizer.prototype.update = function (time) {
           Property.getValueOrDefault(
             pointGraphics._pixelSize,
             time,
-            defaultPixelSize
+            defaultPixelSize,
+            entity
           )
         )
       );
