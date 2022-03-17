@@ -109,7 +109,8 @@ DynamicGeometryUpdater.prototype.update = function (time) {
       var material = MaterialProperty.getValue(
         time,
         fillMaterialProperty,
-        this._material
+        this._material,
+        entity
       );
       this._material = material;
       appearance = new MaterialAppearance({

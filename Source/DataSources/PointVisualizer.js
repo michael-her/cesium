@@ -95,7 +95,7 @@ PointVisualizer.prototype.update = function (time) {
     var show =
       entity.isShowing &&
       entity.isAvailable(time) &&
-      Property.getValueOrDefault(pointGraphics._show, time, true);
+      Property.getValueOrDefault(pointGraphics._show, time, true, null, entity);
     var position;
     if (show) {
       position = Property.getValueOrUndefined(
@@ -262,6 +262,7 @@ PointVisualizer.prototype.update = function (time) {
           pointGraphics._outlineWidth,
           time,
           defaultOutlineWidth,
+          null,
           entity
         )
       );
@@ -272,6 +273,7 @@ PointVisualizer.prototype.update = function (time) {
             pointGraphics._pixelSize,
             time,
             defaultPixelSize,
+            null,
             entity
           )
         )

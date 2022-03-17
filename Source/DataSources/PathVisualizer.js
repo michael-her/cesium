@@ -525,7 +525,9 @@ PolylineUpdater.prototype.updateObject = function (time, item) {
   var resolution = Property.getValueOrDefault(
     pathGraphics._resolution,
     time,
-    defaultResolution
+    defaultResolution,
+    null,
+    entity
   );
 
   polyline.show = true;
@@ -541,17 +543,21 @@ PolylineUpdater.prototype.updateObject = function (time, item) {
   polyline.material = MaterialProperty.getValue(
     time,
     pathGraphics._material,
-    polyline.material
+    polyline.material,
+    entity
   );
   polyline.width = Property.getValueOrDefault(
     pathGraphics._width,
     time,
-    defaultWidth
+    defaultWidth,
+    null,
+    entity
   );
   polyline.distanceDisplayCondition = Property.getValueOrUndefined(
     pathGraphics._distanceDisplayCondition,
     time,
-    polyline.distanceDisplayCondition
+    polyline.distanceDisplayCondition,
+    entity
   );
 };
 

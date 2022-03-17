@@ -436,7 +436,8 @@ DynamicEllipsoidGeometryUpdater.prototype.update = function (time) {
   var material = MaterialProperty.getValue(
     time,
     defaultValue(ellipsoid.material, defaultMaterial),
-    this._material
+    this._material,
+    entity
   );
 
   // Check properties that could trigger a primitive rebuild.

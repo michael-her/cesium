@@ -81,7 +81,7 @@ MaterialProperty.prototype.equals = DeveloperError.throwInstantiationError;
 /**
  * @private
  */
-MaterialProperty.getValue = function (time, materialProperty, material) {
+MaterialProperty.getValue = function (time, materialProperty, material, entity) {
   var type;
 
   if (defined(materialProperty)) {
@@ -90,7 +90,7 @@ MaterialProperty.getValue = function (time, materialProperty, material) {
       if (!defined(material) || material.type !== type) {
         material = Material.fromType(type);
       }
-      materialProperty.getValue(time, material.uniforms);
+      materialProperty.getValue(time, material.uniforms, entity);
       return material;
     }
   }

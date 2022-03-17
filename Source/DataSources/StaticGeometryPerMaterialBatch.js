@@ -242,7 +242,8 @@ Batch.prototype.update = function (time) {
           depthFailColorProperty,
           time,
           Color.WHITE,
-          colorScratch
+          colorScratch,
+          entity
         );
         if (!Color.equals(attributes._lastDepthFailColor, depthFailColor)) {
           attributes._lastDepthFailColor = Color.clone(
@@ -273,7 +274,8 @@ Batch.prototype.update = function (time) {
           distanceDisplayConditionProperty,
           time,
           defaultDistanceDisplayCondition,
-          distanceDisplayConditionScratch
+          distanceDisplayConditionScratch,
+          entity
         );
         if (
           !DistanceDisplayCondition.equals(
@@ -298,7 +300,8 @@ Batch.prototype.update = function (time) {
           offsetProperty,
           time,
           defaultOffset,
-          offsetScratch
+          offsetScratch,
+          entity
         );
         if (!Cartesian3.equals(offset, attributes._lastOffset)) {
           attributes._lastOffset = Cartesian3.clone(
